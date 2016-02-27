@@ -17,13 +17,12 @@ public class GAnimation
     // Updates the animation
     public void Update(long a_timeDelta, double a_timeFactor)
     {
-        currentTranslation.postRotate(((float) 30*a_timeDelta)/1000000000);
-        //currentTranslation.postRotate(180);
     }
 
     // Applys the animation
     public void Apply(Canvas a_targetCanvas)
     {
-        a_targetCanvas.concat(currentTranslation);
+        if (currentTranslation != null)
+            a_targetCanvas.concat(currentTranslation);
     }
 }

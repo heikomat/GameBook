@@ -35,7 +35,6 @@ public class CanvasElement extends GameElement
         this.tempPath = new Path();
         this.paint = new Paint();
         this.SetBoxStyle(this.borderRadius, null, null, this.borderWidth);
-        this.animations.push(new GAnimation());
     }
 
     /*
