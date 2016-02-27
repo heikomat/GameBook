@@ -55,6 +55,41 @@ public class GameElement
     }
 
     /*
+        Function: RemoveChild
+            Removes a direct child of this GameElement
+
+        Parameter:
+            a_id   - String   | The id of the child to remove
+    */
+    public void RemoveChild(String a_id)
+    {
+        this.tempElements = this.children;
+        while (this.tempElements.content != null)
+        {
+            if (this.tempElements.content.id.equals(a_id))
+            {
+                this.tempElements.content.RemoveAllChildren();
+                this.tempElements.pop();
+                return;
+            }
+        }
+    }
+
+    /*
+        Function: RemoveAllChildren
+            Removes all child-elements of this element
+    */
+    public void RemoveAllChildren()
+    {
+        this.tempElements = this.children;
+        while (this.tempElements.content != null)
+        {
+            this.tempElements.content.RemoveAllChildren();
+            this.tempElements.pop();
+        }
+    }
+
+    /*
         Function: GetElement
             Returns the GameElement with the given ID
 

@@ -104,6 +104,56 @@ public class GamePage
     }
 
     /*
+        Function: RemoveAllElements
+            Removes all elemente from this GamePage
+    */
+    public void RemoveAllElements()
+    {
+        this.temp = this.elements;
+        while (this.temp.content != null)
+        {
+            this._RemoveElement(this.temp);
+        }
+    }
+
+    /*
+        Function: RemoveElement
+            Removes an elemente from this GamePage
+
+        Parameter:
+            a_id        - String    | ID of the GameElement to remove
+    */
+    public void RemoveElement(String a_id)
+    {
+        this.tempElement = this.GetElement(a_id);
+        if (this.tempElement == null)
+            return;
+
+        if (this.tempElement.parent != null)
+            this.tempElement.parent.RemoveChild(a_id);
+        else
+        {
+            this.temp = this.elements;
+            while (this.temp.content != null)
+            {
+                if (this.temp.content.id.equals(a_id))
+                {
+                    this._RemoveElement(this.temp);
+                    return;
+                }
+
+                this.temp = this.temp.next;
+            }
+        }
+    }
+
+    private void _RemoveElement(GameStack<GameElement> a_element)
+    {
+        a_element.content.RemoveAllChildren();
+        a_element.pop();
+    }
+
+    /*
         Function: AddLabel
             Adds a new label to the GamePage
 

@@ -143,10 +143,47 @@ public class GameBook extends GLSurfaceView implements SurfaceHolder.Callback
     public GamePage AddPage(String a_id, boolean a_visible)
     {
         if (this.GetPage(a_id) != null)
-            throw new RuntimeException("Page " + a_id + " already exists");
+            throw new Error("Page " + a_id + " already exists");
 
         this.pages.push(new GamePage(a_id, this, a_visible));
         return this.pages.peek();
+    }
+
+    /*
+        Function: RemovePage
+            Removes a Page from the gamebook
+
+        Parameter:
+            a_id        - String    | ID of the Page to remove
+    */
+    public void RemovePage(String a_id)
+    {
+        this.temp = this.pages;
+        while (this.temp.content != null)
+        {
+            if (this.temp.content.id.equals(a_id))
+            {
+                this.temp.content.RemoveAllElements();
+                this.temp.pop();
+                return;
+            }
+
+            this.temp = this.temp.next;
+        }
+    }
+
+    /*
+        Function: RemoveAllPages
+            Removes all pages from the GameBook
+    */
+    public void RemoveAllPages()
+    {
+        this.temp = this.pages;
+        while (this.temp.content != null)
+        {
+            this.temp.content.RemoveAllElements();
+            this.temp.pop();
+        }
     }
 
     /*
@@ -164,7 +201,7 @@ public class GameBook extends GLSurfaceView implements SurfaceHolder.Callback
         this.temp = this.pages;
         while (this.temp.content != null)
         {
-            if (this.temp.content.id == a_id)
+            if (this.temp.content.id.equals(a_id))
                 return this.temp.content;
 
             this.temp = this.temp.next;
