@@ -42,7 +42,7 @@ public class CanvasElement extends GameElement
         Function: SetBoxStyle
             Sets the style of the box drawn by DrawBasics
 
-        Parameter
+        Parameter:
             a_borderRadius      - int       | the border-radius the box will have
             a_backgroundColor   - String    | the background-color the box will have (e.g. "#FFFFFF")
             a_borderColor       - String    | the border-color the box will have (e.g. "#0000FF");
@@ -63,7 +63,7 @@ public class CanvasElement extends GameElement
         Function: DrawBasics
             Draws the box as currently set up
 
-        Parameter
+        Parameter:
             a_targetCanvas  - Canvas    | The canvas on which to draw the box
     */
     public void DrawBasics(Canvas a_targetCanvas)

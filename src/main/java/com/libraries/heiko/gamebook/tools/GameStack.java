@@ -5,12 +5,17 @@ package com.libraries.heiko.gamebook.tools;
  */
 public class GameStack <T>
 {
-    private GameStack<T> temp = null;
-    private int counter = 0;
+    private GameStack<T> temp = null;   // used when pushing a new item
+    public GameStack<T> next = null;    // stores a reference to the next item
+    public T content = null;            // stores the content
 
-    public GameStack<T> next = null;
-    public T content = null;
+    /*
+        Function: push
+            Pushes a new Item to the top of the stack
 
+        Parameter:
+            a_content   - T | The content to store
+    */
     public void push(T a_content)
     {
         this.temp = new GameStack<T>();
@@ -20,6 +25,13 @@ public class GameStack <T>
         this.next = this.temp;
     }
 
+    /*
+        Function: pop
+            Removes the item at the top of the stack
+
+        Returns:
+            T -> - The item that was just removed from the stack
+    */
     public T pop()
     {
         T cache = this.content;
@@ -34,6 +46,13 @@ public class GameStack <T>
         return cache;
     }
 
+    /*
+        Function: peek
+            Gets the item at the top of the stack
+
+        Returns:
+            T -> - The item currently at the top of the stack
+    */
     public T peek()
     {
         return this.content;

@@ -43,7 +43,7 @@ public class Label extends CanvasElement
         Function: SetStyle
             Sets the style of the label
 
-        Parameter
+        Parameter:
             a_fontSize  - int           | the font-size the label will use
             a_fontColor - String        | the font-color the label will have (e.g. "#FFFFFF")
             a_textAlign - Paint.Align   | the text-align the label will have (e.g. Paint.Align.LEFT);
