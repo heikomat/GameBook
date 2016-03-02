@@ -3,7 +3,6 @@ package com.libraries.heiko.gamebook;
 import com.libraries.heiko.gamebook.controls.Label;
 import com.libraries.heiko.gamebook.controls.Sheet;
 import com.libraries.heiko.gamebook.tools.GameStack;
-import android.graphics.Canvas;
 
 /**
  * Created by heiko on 19.02.2016.

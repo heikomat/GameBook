@@ -1,8 +1,6 @@
 package com.libraries.heiko.gamebook.tools;
 
 import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.graphics.Paint;
 import android.graphics.Rect;
 
 /**
@@ -10,9 +8,8 @@ import android.graphics.Rect;
  */
 public class GameBackground
 {
+    // TODO: Document the GameBackground class
     public Bitmap image;
-    Bitmap buffer;
-    Canvas bufferCanvas;
     private int x = 0;
     private int y = 0;
     private int width = 0;
@@ -98,10 +95,6 @@ public class GameBackground
         this.y = a_y;
         this.width = a_width;
         this.height = a_height;
-        this.buffer = Bitmap.createBitmap(a_width, a_height, Bitmap.Config.RGB_565);
-        if (this.bufferCanvas == null)
-            this.bufferCanvas = new Canvas(this.buffer);
-
         this.CheckBackgroundPos();
     }
 

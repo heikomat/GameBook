@@ -1,6 +1,5 @@
 package com.libraries.heiko.gamebook;
 
-import android.graphics.Canvas;
 import android.graphics.Matrix;
 
 /**
