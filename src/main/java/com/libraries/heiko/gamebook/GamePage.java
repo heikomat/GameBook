@@ -60,7 +60,7 @@ public class GamePage
     }
 
     // draws the elements of this GamePage to the current framebuffer
-    public void _Draw(Canvas a_targetCanvas)
+    public void _Draw(int a_shaderProgram)
     {
         if (this.elements == null)
             return;
@@ -68,10 +68,8 @@ public class GamePage
         this.renderElements = elements;
         while (this.renderElements.content != null)
         {
-            a_targetCanvas.save();
-            this.renderElements.content.Draw(a_targetCanvas);
+            this.renderElements.content.Draw(a_shaderProgram);
             this.renderElements = this.renderElements.next;
-            a_targetCanvas.restore();
         }
     }
 

@@ -17,12 +17,15 @@ public class GAnimation
     // Updates the animation
     public void Update(long a_timeDelta, double a_timeFactor)
     {
+        this.currentTranslation.postRotate(60*((float) a_timeDelta/1000000000));
     }
 
     // Applys the animation
-    public void Apply(Canvas a_targetCanvas)
+    public void Apply(int a_shaderProgram)
     {
         if (currentTranslation != null)
-            a_targetCanvas.concat(currentTranslation);
+        {
+            // TODO: Check how to correctly handle animations in OpenGL
+        }
     }
 }

@@ -14,11 +14,12 @@ public class GameElement
     public GameElement parent;                      // Reference to the GameElement that acts as the Parent of this elemente
 
     public Object value;                            // the current value of the element
-    public float x = 0;                             // the x-position of the element
-    public float y = 0;                             // the y-position of the element
-    public float width = 0;                         // The width of the elemenet
-    public float height = 0;                        // The height of the element
-    public boolean visible = true;                  // True: The GameElement is visible, false: The GameElement is not visible
+    public int x = 0;                             // the x-position of the element
+    public int y = 0;                             // the y-position of the element
+    public int width = 0;                         // The width of the elemenet
+    public int height = 0;                        // The height of the element
+    public boolean visible = true;                  // true: The GameElement is visible, false: The GameElement is not visible
+    public boolean hideOverflow = false;            // true: childelements visually can't be oudside this element, false: they can
 
     // cache-variables to prevent memory-allocations
     public GameStack<GAnimation> animations;        // Stack of the currently active animations
@@ -152,28 +153,30 @@ public class GameElement
     }
 
     // Draws this element and all its child-elements to the framebuffer
-    public final void Draw(Canvas a_targetCanvas)
+    public final void Draw(int a_shaderProgram)
     {
         if (!this.visible)
             return;
 
-        a_targetCanvas.translate(this.x + this.width/2, this.y + this.height/2);
         this.drawAnimations = this.animations;
         while (this.drawAnimations.content != null)
         {
-            this.drawAnimations.content.Apply(a_targetCanvas);
+            this.drawAnimations.content.Apply(a_shaderProgram);
             this.drawAnimations = this.drawAnimations.next;
         }
 
-        a_targetCanvas.translate(-(this.x + this.width/2), -(this.y + this.height/2));
-        this._Draw(a_targetCanvas);
-        this._ApplyMask(a_targetCanvas);
-        a_targetCanvas.translate(this.x, this.y);
+        this._Draw(a_shaderProgram);
+
+        if (this.hideOverflow)
+            this._ApplyMask(a_shaderProgram);
+
+        // TODO: Achieve the Canvas.translate-effect in OpenGL, so childen can be positioned relatively
+        //a_targetCanvas.translate(this.x, this.y);
 
         this.drawElements = this.children;
         while (this.drawElements.content != null)
         {
-            this.drawElements.content.Draw(a_targetCanvas);
+            this.drawElements.content.Draw(a_shaderProgram);
             this.drawElements = this.drawElements.next;
         }
     }
@@ -184,12 +187,12 @@ public class GameElement
     }
 
     // placeholder for the _Draw-function. Can be overwritten by the actual controls
-    public void _Draw(Canvas a_targetCanvas)
+    public void _Draw(int a_shaderProgram)
     {
     }
 
     // placeholder for the _ApplyMask-function. Can be overwritten by the actual controls
-    public void _ApplyMask(Canvas a_mask)
+    public void _ApplyMask(int a_shaderProgram)
     {
     }
 }
