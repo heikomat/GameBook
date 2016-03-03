@@ -132,6 +132,18 @@ public class GameElement
         this.value = a_value;
     }
 
+    public void SetSize(int a_width, int a_height)
+    {
+        this.width = a_width;
+        this.height = a_height;
+    }
+
+    public void SetPosition(int a_x, int a_y)
+    {
+        this.x = a_x;
+        this.y = a_y;
+    }
+
     // Führt frame-updates aus, die für alle Elemente gelten, und update die child-Elemente
     public final void Update(long a_timeDelta, double a_timeFactor)
     {

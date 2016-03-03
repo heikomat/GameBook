@@ -220,10 +220,8 @@ public class GamePage
     // Adds a GameElement to the GamePage
     private GameElement _AddElement(GameElement a_element, GameElement a_parent, int a_x, int a_y, int a_width, int a_height)
     {
-        a_element.x = a_x;
-        a_element.y = a_y;
-        a_element.width = a_width;
-        a_element.height = a_height;
+        a_element.SetPosition(a_x, a_y);
+        a_element.SetSize(a_width, a_height);
 
         if (a_parent == null)
             this.elements.push(a_element);

@@ -16,9 +16,9 @@ public class GameRenderer implements GLSurfaceView.Renderer
     private int shaderProgram;
     private final String vertexShaderCode   = "uniform mat4 uMVPMatrix; attribute vec4 vPosition; void main() { gl_Position = uMVPMatrix * vPosition; }";
     private final String fragmentShaderCode = "precision mediump float; uniform vec4 vColor; void main() { gl_FragColor = vColor; }";
-    private final float[] mMVPMatrix = new float[16];           // holds the final mvp-matrix for the vertexShader-program (MVP Matrix = Model View Projection Matrix)
-    private final float[] mProjectionMatrix = new float[16];    // used to make object not look streched due to screen-ratio
-    private final float[] mViewMatrix = new float[16];          // used to define where the camera is
+    private final float[] mvpMatrix = new float[16];           // holds the final mvp-matrix for the vertexShader-program (MVP Matrix = Model View Projection Matrix)
+    private final float[] ProjectionMatrix = new float[16];    // used to make object not look streched due to screen-ratio
+    private final float[] viewMatrix = new float[16];          // used to define where the camera is
 
     // GameBook stuff
     private GameBook gamebook;                                  // Reference to the GameBook-Instance to call the _Draw function
@@ -56,14 +56,13 @@ public class GameRenderer implements GLSurfaceView.Renderer
         // make OpenGL use the new screen-size
         GLES20.glViewport(0, 0, a_width, a_height);
 
-        // define projection-matrix(frustumM) and set the camera-position (View matrix)
-        float ratio = (float) a_width / a_height;
-        Matrix.frustumM(mProjectionMatrix, 0, -ratio, ratio, -1, 1, 3, 7);
-        Matrix.setLookAtM(mViewMatrix, 0, 0, 0, -3, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
+        // define projection-matrix(orthoM) and set the camera-position (View matrix)
+        Matrix.orthoM(ProjectionMatrix, 0, 0, a_width, a_height, 0, -1, 10);
+        Matrix.setLookAtM(viewMatrix, 0, 0, 0, 1, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
 
         // Calculate the projection and view transformation, and pass the result to the transformation matrix of the vertexShader-program
-        Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
-        GLES20.glUniformMatrix4fv(GLES20.glGetUniformLocation(this.shaderProgram, "uMVPMatrix"), 1, false, mMVPMatrix, 0);
+        Matrix.multiplyMM(mvpMatrix, 0, ProjectionMatrix, 0, viewMatrix, 0);
+        GLES20.glUniformMatrix4fv(GLES20.glGetUniformLocation(this.shaderProgram, "uMVPMatrix"), 1, false, mvpMatrix, 0);
     }
 
     // gets called every time a Frame can be drawn. Draws the current scene

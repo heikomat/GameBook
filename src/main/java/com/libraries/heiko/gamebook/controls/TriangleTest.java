@@ -15,11 +15,13 @@ public class TriangleTest
 
     // number of coordinates per vertex in this array
     static final int COORDS_PER_VERTEX = 3;
-    static float triangleCoords[] = {   // in counterclockwise order:
-            0.0f,  0.622008459f, 0.0f, // top
-            -0.5f, -0.311004243f, 0.0f, // bottom left
-            0.5f, -0.311004243f, 0.0f  // bottom right
+    static float triangleCoords[] =
+    {
+            100,    0,      0, // top
+            0,      200,    0, // bottom left
+            600,    200,    0  // bottom right
     };
+
 
     // Set color with red, green, blue and alpha (opacity) values
     float color[] = { 0.63671875f, 0.76953125f, 0.22265625f, 1.0f };
