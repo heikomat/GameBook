@@ -20,8 +20,8 @@ public class Sheet extends BaseElement
     }
 
     // Draws the Sheet on the framebuffer
-    public void _Draw(int a_shaderProgram)
+    public void _Draw(float[] a_mvpMatrix)
     {
-        this.DrawBasics(a_shaderProgram);
+        this.DrawBasics(a_mvpMatrix);
     }
 }

@@ -3,6 +3,7 @@ package com.libraries.heiko.gamebook.controls;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.opengl.GLES20;
+import android.opengl.Matrix;
 
 import com.libraries.heiko.gamebook.GameBook;
 import com.libraries.heiko.gamebook.GameElement;
@@ -30,6 +31,11 @@ public class BaseElement extends GameElement
 
     private int tempHandle;
 
+    // OpenGL stuff
+    public int shaderProgram;
+    public final String vertexShaderCode   = "uniform mat4 uMVPMatrix; attribute vec4 vPosition; void main() { gl_Position = uMVPMatrix * vPosition; }";
+    public final String fragmentShaderCode = "precision mediump float; uniform vec4 vColor; void main() { gl_FragColor = vColor; }";
+
     private float coords[] = {0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0};
     private short drawOrder[] = {0, 1, 2, 0, 2, 3};
     private FloatBuffer vertexBuffer;
@@ -49,6 +55,15 @@ public class BaseElement extends GameElement
         this.dlb.order(ByteOrder.nativeOrder());
 
         this._posToVertices();
+    }
+
+    public void _OGLReady()
+    {
+        // Create an empty OpenGL ES Program, Load the Shaders and add them to the program and create (compile) it
+        this.shaderProgram = GLES20.glCreateProgram();
+        GLES20.glAttachShader(this.shaderProgram, this._LoadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode));
+        GLES20.glAttachShader(this.shaderProgram, this._LoadShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode));
+        GLES20.glLinkProgram(this.shaderProgram);
     }
 
     public void SetSize(int a_width, int a_height)
@@ -116,6 +131,7 @@ public class BaseElement extends GameElement
             this.backgroundColor[0] = (float)((tempColor >> 16) & 0xFF) / 0xFF;
             this.backgroundColor[1] = (float)((tempColor >> 8) & 0xFF) / 0xFF;
             this.backgroundColor[2] = (float)(tempColor & 0xFF) / 0xFF;
+            System.out.println("alpha: " + this.backgroundColor[3]);
         }
 
         if (a_borderColor != null)
@@ -142,23 +158,44 @@ public class BaseElement extends GameElement
         Parameter:
             a_shaderProgram  - int    | The ShaderProgram to use
     */
-    public void DrawBasics(int a_shaderProgram)
+    public void DrawBasics(float[] a_mvpMatrix)
     {
+        if (this.shaderProgram == 0)
+            return;
+
         this.changed = false;
         // TODO: Draw the box with border
 
-        this.tempHandle = GLES20.glGetAttribLocation(a_shaderProgram, "vPosition");
+        // Make OpenGL use the newly created program
+        GLES20.glUseProgram(this.shaderProgram);
+
+        // Enable blending
+        GLES20.glEnable(GLES20.GL_BLEND);
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+
+        GLES20.glUniformMatrix4fv(GLES20.glGetUniformLocation(this.shaderProgram, "uMVPMatrix"), 1, false, a_mvpMatrix, 0);
+
+        this.tempHandle = GLES20.glGetAttribLocation(this.shaderProgram, "vPosition");
         GLES20.glEnableVertexAttribArray(this.tempHandle);
         GLES20.glVertexAttribPointer(this.tempHandle, 3, GLES20.GL_FLOAT, false, 12, vertexBuffer);
-        GLES20.glUniform4fv(GLES20.glGetUniformLocation(a_shaderProgram, "vColor"), 1, this.backgroundColor, 0);
+        GLES20.glUniform4fv(GLES20.glGetUniformLocation(this.shaderProgram, "vColor"), 1, this.backgroundColor, 0);
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrder.length, GLES20.GL_UNSIGNED_SHORT, drawListBuffer);
 
-        this.background.Draw(a_shaderProgram, this.x, this.y, this.width, this.height);
+        this.background.Draw(this.shaderProgram, this.x, this.y, this.width, this.height);
     }
 
     // apply the mask of this element, so sub elements won't overflow
-    public void _ApplyMask(int a_shaderProgram)
+    public void _ApplyMask(float[] a_mvpMatrix)
     {
         // TODO: Apply some kind of mask
+    }
+
+    // creates a shader of a given type an compiles a given sourceCode into it
+    private static int _LoadShader(int a_type, String a_shaderCode)
+    {
+        int shader = GLES20.glCreateShader(a_type);
+        GLES20.glShaderSource(shader, a_shaderCode);
+        GLES20.glCompileShader(shader);
+        return shader;
     }
 }

@@ -4,7 +4,6 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.opengl.GLSurfaceView;
 
-import com.libraries.heiko.gamebook.controls.TriangleTest;
 import com.libraries.heiko.gamebook.tools.GameStack;
 import com.libraries.heiko.gamebook.tools.ResourceManager;
 
@@ -17,7 +16,7 @@ public class GameBook extends GLSurfaceView
     public ResourceManager resources;                           // Manages resources like images and audio
 
     private GameThread gameThread;                              // The thread that triggers the game-mechanics-updates
-    private GameRenderer gameRenderer;                          // The OpenGL-Renderer that draws all the things
+    public GameRenderer gameRenderer;                           // The OpenGL-Renderer that draws all the things
     public long lastGameFPS = 0;                                // The framerate the gameThread achieved in the last Frame
     public long lastDrawFPS = 0;                                // The framerate the drawThread achieved in the last Frame
 
@@ -31,8 +30,7 @@ public class GameBook extends GLSurfaceView
     // Framework-interal settings
     public Bitmap.Config bitmapConfig = Bitmap.Config.RGB_565;  // The bitmap config to use throughout the game
 
-    private TriangleTest mTriangle = new TriangleTest();        // Holding a triangle for testing purposes. Should be removed, when the BaseElement class is finished
-    public GameBook(Context a_context)
+     public GameBook(Context a_context)
     {
         super(a_context);
         this.screenWidth = a_context.getResources().getDisplayMetrics().widthPixels;
@@ -50,7 +48,7 @@ public class GameBook extends GLSurfaceView
         setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
 
         // Initiate the GameThread and start it
-        this.gameThread = new GameThread(this, 100);
+        this.gameThread = new GameThread(this, 3);
         this.gameThread.setRunning(true);
     }
 
@@ -179,17 +177,26 @@ public class GameBook extends GLSurfaceView
     }
 
     // Draws teh current game-status to the next free Framebuffer. Is called by the drawThread
-    public void _Draw(int a_shaderProgram)
+    public void _Draw(float[] a_mvpMatrix)
     {
-        // test-drawing of a triangle. Should be removed, when the GameRenderer is finished
-        mTriangle.draw(a_shaderProgram);
-
         this.drawPages = pages;
         while (this.drawPages.content != null)
         {
             if (this.drawPages.content.visible == true)
-                this.drawPages.content._Draw(a_shaderProgram);
+                this.drawPages.content._Draw(a_mvpMatrix);
 
+            this.drawPages = this.drawPages.next;
+        }
+    }
+
+    // gets called once OpenGL is ready to be used
+    public void _OGLReady()
+    {
+        this.resources._OGLReady();
+        this.drawPages = pages;
+        while (this.drawPages.content != null)
+        {
+            this.drawPages.content._OGLReady();
             this.drawPages = this.drawPages.next;
         }
     }

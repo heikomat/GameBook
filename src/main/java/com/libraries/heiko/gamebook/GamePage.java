@@ -2,6 +2,7 @@ package com.libraries.heiko.gamebook;
 
 import com.libraries.heiko.gamebook.controls.Label;
 import com.libraries.heiko.gamebook.controls.Sheet;
+import com.libraries.heiko.gamebook.tools.GameFont;
 import com.libraries.heiko.gamebook.tools.GameStack;
 
 /**
@@ -59,7 +60,7 @@ public class GamePage
     }
 
     // draws the elements of this GamePage to the current framebuffer
-    public void _Draw(int a_shaderProgram)
+    public void _Draw(float[] a_mvpMatrix)
     {
         if (this.elements == null)
             return;
@@ -67,7 +68,21 @@ public class GamePage
         this.renderElements = elements;
         while (this.renderElements.content != null)
         {
-            this.renderElements.content.Draw(a_shaderProgram);
+            this.renderElements.content.Draw(a_mvpMatrix);
+            this.renderElements = this.renderElements.next;
+        }
+    }
+
+    // gets called once OpenGL is ready to be used
+    public void _OGLReady()
+    {
+        if (this.elements == null)
+            return;
+
+        this.renderElements = elements;
+        while (this.renderElements.content != null)
+        {
+            this.renderElements.content.OGLReady();
             this.renderElements = this.renderElements.next;
         }
     }
@@ -164,11 +179,11 @@ public class GamePage
         Returns:
             GameElement -> - The new label
     */
-    public GameElement AddLabel(String a_id, String a_parentID, int a_x, int a_y, String a_text)
+    public GameElement AddLabel(String a_id, String a_parentID, int a_x, int a_y, GameFont a_font, String a_text)
     {
         this._CheckElementAlreadyExists(a_id);
         this.tempElement = this._GetParentElement(a_parentID);
-        this.currentElment = new Label(a_id, this, this.book, this.tempElement, a_text);
+        this.currentElment = new Label(a_id, this, this.book, this.tempElement, a_font, a_text);
         return this._AddElement(this.currentElment, this.tempElement, a_x, a_y);
     }
 

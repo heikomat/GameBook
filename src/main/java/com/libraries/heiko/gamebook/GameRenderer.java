@@ -12,13 +12,10 @@ import javax.microedition.khronos.opengles.GL10;
  */
 public class GameRenderer implements GLSurfaceView.Renderer
 {
-    // OpenGL stuff
-    private int shaderProgram;
-    private final String vertexShaderCode   = "uniform mat4 uMVPMatrix; attribute vec4 vPosition; void main() { gl_Position = uMVPMatrix * vPosition; }";
-    private final String fragmentShaderCode = "precision mediump float; uniform vec4 vColor; void main() { gl_FragColor = vColor; }";
     private final float[] mvpMatrix = new float[16];           // holds the final mvp-matrix for the vertexShader-program (MVP Matrix = Model View Projection Matrix)
     private final float[] ProjectionMatrix = new float[16];    // used to make object not look streched due to screen-ratio
     private final float[] viewMatrix = new float[16];          // used to define where the camera is
+    public boolean oglReady = false;                           // flag that indicates wether OpenGL is ready to be used
 
     // GameBook stuff
     private GameBook gamebook;                                  // Reference to the GameBook-Instance to call the _Draw function
@@ -38,14 +35,8 @@ public class GameRenderer implements GLSurfaceView.Renderer
 
     public void onSurfaceCreated(GL10 a_gl, EGLConfig a_config)
     {
-        // Create an empty OpenGL ES Program, Load the Shaders and add them to the program and create (compile) it
-        this.shaderProgram = GLES20.glCreateProgram();
-        GLES20.glAttachShader(this.shaderProgram, this._LoadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode));
-        GLES20.glAttachShader(this.shaderProgram, this._LoadShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode));
-        GLES20.glLinkProgram(this.shaderProgram);
-
-        // Make OpenGL use the newly created program
-        GLES20.glUseProgram(this.shaderProgram);
+        this.oglReady = true;
+        this.gamebook._OGLReady();
 
         // Make the Background black
         GLES20.glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
@@ -57,12 +48,12 @@ public class GameRenderer implements GLSurfaceView.Renderer
         GLES20.glViewport(0, 0, a_width, a_height);
 
         // define projection-matrix(orthoM) and set the camera-position (View matrix)
-        Matrix.orthoM(ProjectionMatrix, 0, 0, a_width, a_height, 0, -1, 10);
+        Matrix.orthoM(ProjectionMatrix, 0, 0, a_width, 0, a_height, -1, 10);
+        //Matrix.orthoM(ProjectionMatrix, 0, 0, a_width, 0, a_height, -1, 10);
         Matrix.setLookAtM(viewMatrix, 0, 0, 0, 1, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
 
         // Calculate the projection and view transformation, and pass the result to the transformation matrix of the vertexShader-program
         Matrix.multiplyMM(mvpMatrix, 0, ProjectionMatrix, 0, viewMatrix, 0);
-        GLES20.glUniformMatrix4fv(GLES20.glGetUniformLocation(this.shaderProgram, "uMVPMatrix"), 1, false, mvpMatrix, 0);
     }
 
     // gets called every time a Frame can be drawn. Draws the current scene
@@ -72,17 +63,8 @@ public class GameRenderer implements GLSurfaceView.Renderer
         long startTime = System.nanoTime();
 
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
-        this.gamebook._Draw(this.shaderProgram);
+        this.gamebook._Draw(this.mvpMatrix);
 
         this.gamebook.lastDrawFPS = 1000000000/(System.nanoTime() - startTime);
-    }
-
-    // creates a shader of a given type an compiles a given sourceCode into it
-    private static int _LoadShader(int a_type, String a_shaderCode)
-    {
-        int shader = GLES20.glCreateShader(a_type);
-        GLES20.glShaderSource(shader, a_shaderCode);
-        GLES20.glCompileShader(shader);
-        return shader;
     }
 }

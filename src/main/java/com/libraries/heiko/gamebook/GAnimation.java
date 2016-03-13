@@ -16,11 +16,11 @@ public class GAnimation
     // Updates the animation
     public void Update(long a_timeDelta, double a_timeFactor)
     {
-        this.currentTranslation.postRotate(60*((float) a_timeDelta/1000000000));
+        this.currentTranslation.postRotate(60 * ((float) a_timeDelta / 1000000000));
     }
 
     // Applys the animation
-    public void Apply(int a_shaderProgram)
+    public void Apply(float[] a_mvpMatrix)
     {
         if (currentTranslation != null)
         {

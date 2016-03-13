@@ -12,6 +12,8 @@ import com.libraries.heiko.gamebook.GameBook;
 public class ResourceManager
 {
     private GameStack<GameResource> images;     // holds resources of the type 'image'
+    private GameStack<GameResource> fonts;      // holds resources of the type 'font'
+    private GameFont tempFont;                    // hold a font to load it
     private GameStack<GameResource> tempStack;  // used to iterate trough resurce-stacks
     private GameResource tempResource;          // used to temporarily hold a new resource when adding it
     private GameBook book;                      // reference to the GameBook
@@ -20,6 +22,7 @@ public class ResourceManager
     {
         this.book = a_book;
         this.images = new GameStack<GameResource>();
+        this.fonts = new GameStack<GameResource>();
         this.tempStack = new GameStack<GameResource>();
     }
 
@@ -98,6 +101,71 @@ public class ResourceManager
     public void RemoveImage(String a_id)
     {
         this._RemoveResource(a_id, this.images);
+    }
+
+    /*
+        Function: AddFont
+            Stores an font using an id to later retrieve it
+
+        Parameter:
+            a_id        - String    | ID of the stored font
+            a_font      - String    | path of the font-file inside the assets-folder
+            a_fontSize  - Integer   | FontSize to use
+            a_padX      - Integer   | Letter-distance on the x-axis
+            a_padY      - Integer   | Letter-distance in the y-axis
+
+        Returns:
+            GameFont -> - The Loaded font
+    */
+    public GameFont AddFont(String a_id, String a_font, int a_fontSize, int a_padX, int a_padY)
+    {
+        tempFont =  new GameFont(this.book.getContext().getAssets(), a_font, a_fontSize, a_padX, a_padY);
+        this._AddResource(a_id, this.fonts, tempFont);
+        if (this.book.gameRenderer.oglReady == true)
+            tempFont.Load();
+
+        return (GameFont) this._GetResource(a_id, this.fonts);
+    }
+
+    /*
+        Function: AddFont
+            Stores an image using an id to later retrieve it. letter-padding is set to 2px
+
+        Parameter:
+            a_id        - String    | ID of the stored font
+            a_font      - String    | path of the font-file inside the assets-folder
+            a_fontSize  - Integer   | FontSize to use
+
+        Returns:
+            GameFont -> - The Loaded font
+    */
+    public GameFont AddFont(String a_id, String a_font, int a_fontSize)
+    {
+        return this.AddFont(a_id, a_font, a_fontSize, 2, 2);
+    }
+
+    /*
+        Function: RemoveImage
+            Removes a previously stored font from the ResourceManager
+
+        Parameter:
+            a_id    - String    | ID of the font to remove
+    */
+    public void RemoveFont(String a_id)
+    {
+        this._RemoveResource(a_id, this.fonts);
+    }
+
+    public void _OGLReady()
+    {
+        this.tempStack = this.fonts;
+        while (this.tempStack.content != null)
+        {
+            if (!((GameFont) this.tempStack.content.resource).fontLoaded)
+                ((GameFont) this.tempStack.content.resource).Load();
+
+            this.tempStack = this.tempStack.next;
+        }
     }
 
     private Object _GetResource(String a_id, GameStack<GameResource> a_targetStack)

@@ -1,5 +1,7 @@
 package com.libraries.heiko.gamebook;
 
+import android.opengl.Matrix;
+
 import com.libraries.heiko.gamebook.tools.GameStack;
 
 /**
@@ -164,7 +166,7 @@ public class GameElement
     }
 
     // Draws this element and all its child-elements to the framebuffer
-    public final void Draw(int a_shaderProgram)
+    public final void Draw(float[] a_mvpMatrix)
     {
         if (!this.visible)
             return;
@@ -172,24 +174,40 @@ public class GameElement
         this.drawAnimations = this.animations;
         while (this.drawAnimations.content != null)
         {
-            this.drawAnimations.content.Apply(a_shaderProgram);
+            this.drawAnimations.content.Apply(a_mvpMatrix);
             this.drawAnimations = this.drawAnimations.next;
         }
-
-        this._Draw(a_shaderProgram);
+        this._Draw(a_mvpMatrix);
 
         if (this.hideOverflow)
-            this._ApplyMask(a_shaderProgram);
+            this._ApplyMask(a_mvpMatrix);
 
-        // TODO: Achieve the Canvas.translate-effect in OpenGL, so childen can be positioned relatively
-        //a_targetCanvas.translate(this.x, this.y);
-
+        Matrix.translateM(a_mvpMatrix, 0, this.x, this.y, 0);
         this.drawElements = this.children;
         while (this.drawElements.content != null)
         {
-            this.drawElements.content.Draw(a_shaderProgram);
+            this.drawElements.content.Draw(a_mvpMatrix);
             this.drawElements = this.drawElements.next;
         }
+        Matrix.translateM(a_mvpMatrix, 0, -this.x, -this.y, 0);
+    }
+
+    // Draws this element and all its child-elements to the framebuffer
+    public final void OGLReady()
+    {
+        this._OGLReady();
+        this.drawElements = this.children;
+        while (this.drawElements.content != null)
+        {
+            this.drawElements.content._OGLReady();
+            this.drawElements = this.drawElements.next;
+        }
+    }
+
+    // placeholder for the _OGLReady-function. Can be overwritten by the actual controls
+    public void _OGLReady()
+    {
+
     }
 
     // placeholder for the _Update-function. Can be overwritten by the actual controls
@@ -198,12 +216,12 @@ public class GameElement
     }
 
     // placeholder for the _Draw-function. Can be overwritten by the actual controls
-    public void _Draw(int a_shaderProgram)
+    public void _Draw(float[] a_mvpMatrix)
     {
     }
 
     // placeholder for the _ApplyMask-function. Can be overwritten by the actual controls
-    public void _ApplyMask(int a_shaderProgram)
+    public void _ApplyMask(float[] a_mvpMatrix)
     {
     }
 }
