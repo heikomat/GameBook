@@ -48,7 +48,7 @@ public class GameBook extends GLSurfaceView
         setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
 
         // Initiate the GameThread and start it
-        this.gameThread = new GameThread(this, 3);
+        this.gameThread = new GameThread(this, 100);
         this.gameThread.setRunning(true);
     }
 
