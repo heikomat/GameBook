@@ -15,6 +15,7 @@ public class GameRenderer implements GLSurfaceView.Renderer
     private final float[] mvpMatrix = new float[16];           // holds the final mvp-matrix for the vertexShader-program (MVP Matrix = Model View Projection Matrix)
     private final float[] ProjectionMatrix = new float[16];    // used to make object not look streched due to screen-ratio
     private final float[] viewMatrix = new float[16];          // used to define where the camera is
+    private long lastFrameTime = 0;                            // stores when the last frame finished rendering
     public boolean oglReady = false;                           // flag that indicates wether OpenGL is ready to be used
 
     // GameBook stuff
@@ -44,6 +45,7 @@ public class GameRenderer implements GLSurfaceView.Renderer
 
     public void onSurfaceChanged(GL10 a_gl, int a_width, int a_height)
     {
+        // TODO: Implement a displaySize-independent game-size
         // make OpenGL use the new screen-size
         GLES20.glViewport(0, 0, a_width, a_height);
 
@@ -60,11 +62,11 @@ public class GameRenderer implements GLSurfaceView.Renderer
     public void onDrawFrame(GL10 a_gl)
     {
         // Clear the BackGround and draws the enviroment
-        long startTime = System.nanoTime();
-
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
         this.gamebook._Draw(this.mvpMatrix);
 
-        this.gamebook.lastDrawFPS = 1000000000/(System.nanoTime() - startTime);
+        // calculate draw-fps
+        this.gamebook.lastDrawFPS = 1000000000/(System.nanoTime() - this.lastFrameTime);
+        this.lastFrameTime = System.nanoTime();
     }
 }

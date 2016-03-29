@@ -47,6 +47,7 @@ public class GameBook extends GLSurfaceView
         this.setRenderer(this.gameRenderer);
         setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
 
+
         // Initiate the GameThread and start it
         this.gameThread = new GameThread(this, 100);
         this.gameThread.setRunning(true);
@@ -98,6 +99,7 @@ public class GameBook extends GLSurfaceView
     */
     public GamePage AddPage(String a_id, boolean a_visible)
     {
+		// TODO: don't add the Page on top of the stack, but in a position based on its z-index
         if (this.GetPage(a_id) != null)
             throw new Error("Page " + a_id + " already exists");
 

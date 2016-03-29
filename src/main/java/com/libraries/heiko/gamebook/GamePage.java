@@ -14,6 +14,7 @@ public class GamePage
     GameBook book;                                  // Reference to the GameBook that created this GamePage
     GameStack<GameElement> elements;                // beinhaltet nur die "Parentlosten" elemente. Verweise zu den anderen Elementen der Page laufen über diese
     boolean visible = false;                        // true: the GamePage and its elements will be visible, false: The GamePage will be invisible
+    int zIndex = 0;                                 // z-index of the Page. Pages with a lower z-index will be drawn first (below other pages)
 
     // cache-variables to prevent memory-allocations
     GameElement currentElment;                      // used to add new elements
@@ -235,6 +236,7 @@ public class GamePage
     // Adds a GameElement to the GamePage
     private GameElement _AddElement(GameElement a_element, GameElement a_parent, int a_x, int a_y, int a_width, int a_height)
     {
+        // TODO: don't add the Element on top of the stack, but in a position based on its z-index
         a_element.SetPosition(a_x, a_y);
         a_element.SetSize(a_width, a_height);
 

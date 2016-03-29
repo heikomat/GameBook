@@ -3,12 +3,11 @@ package com.libraries.heiko.gamebook.controls;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.opengl.GLES20;
-import android.opengl.Matrix;
+import android.opengl.GLUtils;
 
 import com.libraries.heiko.gamebook.GameBook;
 import com.libraries.heiko.gamebook.GameElement;
 import com.libraries.heiko.gamebook.GamePage;
-import com.libraries.heiko.gamebook.tools.GameBackground;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -21,49 +20,138 @@ import java.nio.ShortBuffer;
 public class BaseElement extends GameElement
 {
     private int borderRadius = 0;                       // Current border-radius
-    private int tempColor;
-    private float[] backgroundColor = {0, 0, 0, 0};     // Current background-color
+    private float[] backgroundColor;                    // Current background-color
+    private float backgroundWidth;                      // Current width of the background-image in pixels
+    private float backgroundHeight;                     // Current height of the background-image in pixels
 
     private int borderColor = Color.TRANSPARENT;        // Current border-color
     private int borderWidth = 0;                        // Current border-width
-    public GameBackground background;                   // Current background
-    private boolean changed = true;                     // true: the element changed since the las draw, false: the element did not change since the last draw
 
-    private int tempHandle;
+	// cache-variables to prevent memory-allocations
+	private int tempColor;								// used by SetBoxStyle to parse new colors
 
     // OpenGL stuff
-    public int shaderProgram;
-    public final String vertexShaderCode   = "uniform mat4 uMVPMatrix; attribute vec4 vPosition; void main() { gl_Position = uMVPMatrix * vPosition; }";
-    public final String fragmentShaderCode = "precision mediump float; uniform vec4 vColor; void main() { gl_FragColor = vColor; }";
+    private int colorShaderProgram;						// the ShaderProgram to use when only a backgroundColor is set
+    private int imageShaderProgram;						// the ShaderProgram to use when only a backgroundImage is set
+    private int colorAndImageShaderProgram;				// the ShaderProgram to use when both backgroundColor and backgroundImage are set
+    public int shaderProgram;							// the currently used shaderProgram based on the set backgroundColor and backgroundImage
+														// needs to be public, so subclasses can decide not to call DrawBasics if not needed
 
-    private float coords[] = {0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0};
-    private short drawOrder[] = {0, 1, 2, 0, 2, 3};
-    private FloatBuffer vertexBuffer;
-    private ShortBuffer drawListBuffer;
-    ByteBuffer bb;
-    ByteBuffer dlb;
+	// Variables necessary for positioning the vertices
+	private float coords[] = {0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0};						// The coordinates of the 6 vertices of the rect
+	private FloatBuffer vertexBuffer;														// Buffer holding the coordinates from coords
+	private int vertexPositionHandle = 0;													// Handle to vPosition in the vertexShaders
+
+	// Variables necessary to determine the drawOrder of the vertices
+	private short drawOrder[] = {0, 1, 2, 0, 2, 3};											// The order in which to draw the vertices
+	private ShortBuffer drawListBuffer;														// Buffer holding the draworder
+
+	// Variables necessary to draw the texture (aka backgroundImage, if there is one set)
+	private int[] textureIDs = new int[1];													// Array holding the pointer to the background-texture
+	private float[] texturePositions = {0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f};	// Positions of the texture
+	public FloatBuffer texturePositionBuffer;												// Buffer holding the texture-positions
+	private int texturePositionHandle = 0;													// Handle to s_texture in the fragmentShaders
+	private Bitmap backgroundBitmap;														// The Bitmap to use as texture (aka backgroundImage)
+
+	// The texture-shader to use, when a background-texture is set
+    public final String textureVertexShaderCode  =
+        "uniform mat4 uMVPMatrix;" +
+        "attribute vec4 vPosition;" +
+        "attribute vec2 a_texCoord;" +
+        "varying vec2 v_texCoord;" +
+        "void main()" +
+        "{" +
+        "   gl_Position = uMVPMatrix * vPosition;" +
+        "   v_texCoord = a_texCoord;" +
+        "}";
+
+	// The texture-shader to use, when no background-texture is set
+    public final String colorVertexShaderCode =
+        "uniform mat4 uMVPMatrix;" +
+        "attribute vec4 vPosition;" +
+        "void main()" +
+        "{" +
+        "   gl_Position = uMVPMatrix * vPosition;" +
+        "}";
+
+	// The fragment-shader to use, when only a background-color, but no background-texture is set
+    public final String colorFragmentShaderCode =
+        "precision mediump float;" +
+        "uniform vec4 vColor;" +
+        "void main()" +
+        "{" +
+        "   gl_FragColor = vColor;" +
+        "}";
+
+	// The fragment-shader to use, when only a background-texture, but no background-color is set
+    public final String imageFragmentShaderCode =
+        "precision mediump float;" +
+        "varying vec2 v_texCoord;" +
+        "uniform sampler2D s_texture;" +
+        "void main()" +
+        "{" +
+        "   vec4 tex = texture2D (s_texture, v_texCoord);" +
+        "   gl_FragColor = vec4(tex.r, tex.g, tex.b, 1.0 - tex.a);" +
+        "}";
+
+	// The fragment-shader to use, when both background-color and background-texture are set
+    public final String colorAndImageFragmentShaderCode =
+        "precision mediump float;" +
+        "uniform vec4 vColor;" +
+        "varying vec2 v_texCoord;" +
+        "uniform sampler2D s_texture;" +
+        "void main()" +
+        "{" +
+        "   vec4 texture = texture2D(s_texture, v_texCoord);" +
+        "   vec4 bgColor = vColor;" +
+        "   bgColor.a = bgColor.a - clamp(bgColor.a + texture.a - 1.0, 0.0, bgColor.a);" +
+        "   texture.a = 1.0 - (texture.a - clamp(vColor.a + texture.a - 1.0, 0.0, texture.a));" +
+        "   gl_FragColor = vec4(bgColor.r*bgColor.a/vColor.a + texture.r," +		// Dividing by old alpha, multiplying by new one
+        "						bgColor.g*bgColor.a/vColor.a + texture.g, " +
+        "						bgColor.b*bgColor.a/vColor.a + texture.b, " +
+        "						bgColor.a * texture.a);" +
+        "}";
 
     public BaseElement(String a_id, GamePage a_page, GameBook a_book, GameElement a_parent)
     {
         super(a_id, a_page, a_book, a_parent);
-        this.background = new GameBackground();
         this.SetBoxStyle(this.borderRadius, null, null, this.borderWidth);
 
-        this.bb = ByteBuffer.allocateDirect(this.coords.length * 4);
-        this.bb.order(ByteOrder.nativeOrder());
-        this.dlb = ByteBuffer.allocateDirect(drawOrder.length * 2);
-        this.dlb.order(ByteOrder.nativeOrder());
+		// initialize vertexbuffer and texturePositionBuffer
+        ByteBuffer vertexByteBuffer = ByteBuffer.allocateDirect(this.coords.length * 4);
+        this.vertexBuffer = vertexByteBuffer.order(ByteOrder.nativeOrder()).asFloatBuffer();
 
+		ByteBuffer textureByteBuffer = ByteBuffer.allocateDirect(texturePositions.length * 4);
+		this.texturePositionBuffer = textureByteBuffer.order(ByteOrder.nativeOrder()).asFloatBuffer();
+
+        // initialize byte buffer for the draw list
+        ByteBuffer dlb = ByteBuffer.allocateDirect(drawOrder.length * 2);
+        this.drawListBuffer = dlb.order(ByteOrder.nativeOrder()).asShortBuffer();
+        this.drawListBuffer.put(this.drawOrder).position(0);
         this._posToVertices();
     }
 
     public void _OGLReady()
     {
         // Create an empty OpenGL ES Program, Load the Shaders and add them to the program and create (compile) it
-        this.shaderProgram = GLES20.glCreateProgram();
-        GLES20.glAttachShader(this.shaderProgram, this._LoadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode));
-        GLES20.glAttachShader(this.shaderProgram, this._LoadShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode));
-        GLES20.glLinkProgram(this.shaderProgram);
+        this.colorShaderProgram = GLES20.glCreateProgram();
+        GLES20.glAttachShader(this.colorShaderProgram, this._LoadShader(GLES20.GL_VERTEX_SHADER, this.colorVertexShaderCode));
+        GLES20.glAttachShader(this.colorShaderProgram, this._LoadShader(GLES20.GL_FRAGMENT_SHADER, this.colorFragmentShaderCode));
+        GLES20.glLinkProgram(this.colorShaderProgram);
+
+        this.imageShaderProgram = GLES20.glCreateProgram();
+        GLES20.glAttachShader(this.imageShaderProgram, this._LoadShader(GLES20.GL_VERTEX_SHADER, this.textureVertexShaderCode));
+        GLES20.glAttachShader(this.imageShaderProgram, this._LoadShader(GLES20.GL_FRAGMENT_SHADER, this.imageFragmentShaderCode));
+        GLES20.glLinkProgram(this.imageShaderProgram);
+
+        this.colorAndImageShaderProgram = GLES20.glCreateProgram();
+        GLES20.glAttachShader(this.colorAndImageShaderProgram, this._LoadShader(GLES20.GL_VERTEX_SHADER, this.textureVertexShaderCode));
+        GLES20.glAttachShader(this.colorAndImageShaderProgram, this._LoadShader(GLES20.GL_FRAGMENT_SHADER, this.colorAndImageFragmentShaderCode));
+        GLES20.glLinkProgram(this.colorAndImageShaderProgram);
+
+        // Create a texture and get its ID
+        GLES20.glGenTextures(1, this.textureIDs, 0);
+        this._UpdateShaderProgram();
     }
 
     public void SetSize(int a_width, int a_height)
@@ -100,14 +188,7 @@ public class BaseElement extends GameElement
 
         // create a floating point buffer from the ByteBuffer, add the coordinates to it,
         // and make it read from the beginning of the buffer
-        this.vertexBuffer = bb.asFloatBuffer();
-        this.vertexBuffer.put(this.coords);
-        this.vertexBuffer.position(0);
-
-        // initialize byte buffer for the draw list
-        drawListBuffer = this.dlb.asShortBuffer();
-        drawListBuffer.put(this.drawOrder);
-        drawListBuffer.position(0);
+        this.vertexBuffer.put(this.coords).position(0);
     }
 
     /*
@@ -122,20 +203,44 @@ public class BaseElement extends GameElement
     */
     public void SetBoxStyle(int a_borderRadius, String a_backgroundColor, String a_borderColor, int a_borderWidth)
     {
+		// TODO: Implement actual usage of borderRadius and borderWidth
         this.borderRadius = a_borderRadius;
         this.borderWidth = a_borderWidth;
         if (a_backgroundColor != null)
         {
+            if (this.backgroundColor == null)
+                this.backgroundColor = new float[4];
+
             this.tempColor = Color.parseColor(a_backgroundColor);
-            this.backgroundColor[3] = (float)(tempColor >> 24) / 0xFF;
-            this.backgroundColor[0] = (float)((tempColor >> 16) & 0xFF) / 0xFF;
-            this.backgroundColor[1] = (float)((tempColor >> 8) & 0xFF) / 0xFF;
-            this.backgroundColor[2] = (float)(tempColor & 0xFF) / 0xFF;
-            System.out.println("alpha: " + this.backgroundColor[3]);
+
+            this.backgroundColor[3] = (float)((tempColor >> 24) & 0xFF) / 0xFF;
+            this.backgroundColor[0] = ((float)((tempColor >> 16) & 0xFF) / 0xFF) * this.backgroundColor[3];
+            this.backgroundColor[1] = ((float)((tempColor >> 8) & 0xFF) / 0xFF) * this.backgroundColor[3];
+            this.backgroundColor[2] = ((float)(tempColor & 0xFF) / 0xFF) * this.backgroundColor[3];
+            this.backgroundColor[3] = 1.0f - this.backgroundColor[3];
         }
 
         if (a_borderColor != null)
             this.borderColor = Color.parseColor(a_borderColor);
+
+        this._UpdateShaderProgram();
+    }
+
+    /*
+        Function: SetBackgroundImage
+            Sets the background-bitmap of the object
+
+        Parameter:
+            a_bitmap    - Bitmap    | the backgroundImage to set
+            a_width     - float		| The width in pixel the texture should get
+            a_height    - float		| The height in pixel the texture should get
+    */
+    public void SetBackground(Bitmap a_bitmap, float a_width, float a_height)
+    {
+        this.backgroundBitmap = a_bitmap;
+        this._UpdateShaderProgram();
+
+        this.SetBackgroundSize(a_width, a_height);
     }
 
     /*
@@ -145,10 +250,79 @@ public class BaseElement extends GameElement
         Parameter:
             a_bitmap    - Bitmap    | the backgroundImage to set
     */
-    public void SetBackgroundImage(Bitmap a_bitmap)
+    public void SetBackground(Bitmap a_bitmap)
     {
-        this.background.SetBitmap(a_bitmap);
-        this.background.SetBounds(this.x, this.y, this.width, this.height);
+        this.SetBackground(a_bitmap, this.width, this.height);
+    }
+
+	/*
+		Function: SetBackgroundSize
+			Sets the size of the background-texture
+
+		Parameter:
+			a_width		- float	| The width in pixel the texture should get
+			a_height	- float	| The height in pixel the texture should get
+	*/
+    public void SetBackgroundSize(float a_width, float a_height)
+    {
+        if (a_width == 0 || a_height == 0)
+            throw new Error("Backgroundwidth or backgroundheight of " + this.id + " cannot be set to 0");
+
+        this.backgroundWidth = a_width;
+        this.backgroundHeight = a_height;
+
+        // Set the new texture-position based on the new texture-size
+		// TODO: Allow the setting of the actual position, not only the Size!
+		this.texturePositions[1] = this.height / this.backgroundHeight;
+		this.texturePositions[4] = this.width / this.backgroundWidth;
+		this.texturePositions[6] = this.width / this.backgroundWidth;
+		this.texturePositions[7] = this.height / this.backgroundHeight;
+		this.texturePositionBuffer.put(this.texturePositions).position(0);
+    }
+
+    private void _UpdateShaderProgram()
+    {
+        if (this.book.gameRenderer.oglReady == false)
+        {
+            this.shaderProgram = 0;
+            return;
+        }
+
+        if (this.backgroundColor != null && this.backgroundBitmap == null)
+            this.shaderProgram = this.colorShaderProgram;
+        else if (this.backgroundColor == null && this.backgroundBitmap != null)
+            this.shaderProgram = this.imageShaderProgram;
+        else if (this.backgroundColor != null && this.backgroundBitmap != null)
+            this.shaderProgram = this.colorAndImageShaderProgram;
+        else
+            this.shaderProgram = 0;
+
+		if (this.shaderProgram == 0)
+			return;
+
+		// Get the vertex-position handle of the current program and enable its usage
+		this.vertexPositionHandle = GLES20.glGetAttribLocation(this.shaderProgram, "vPosition");
+
+        if (this.backgroundBitmap != null)
+        {
+            // Bind texture to texturename
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.textureIDs[0]);
+
+            // Set filtering
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
+
+            // Set wrapping mode
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_REPEAT);
+            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_REPEAT);
+
+            // Load the bitmap into the bound texture.
+            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, this.backgroundBitmap, 0);
+
+            // Get handle to texture coordinates
+            this.texturePositionHandle = GLES20.glGetAttribLocation(this.shaderProgram, "a_texCoord");
+        }
     }
 
     /*
@@ -163,25 +337,37 @@ public class BaseElement extends GameElement
         if (this.shaderProgram == 0)
             return;
 
-        this.changed = false;
-        // TODO: Draw the box with border
-
         // Make OpenGL use the newly created program
-        GLES20.glUseProgram(this.shaderProgram);
+		GLES20.glUseProgram(this.shaderProgram);
 
-        // Enable blending
+        // Enable blending for premultiplied alpha
         GLES20.glEnable(GLES20.GL_BLEND);
-        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_SRC_ALPHA);
 
+		// Set the view-projecton-matrix and the vertex-position
+		GLES20.glEnableVertexAttribArray(this.vertexPositionHandle);
         GLES20.glUniformMatrix4fv(GLES20.glGetUniformLocation(this.shaderProgram, "uMVPMatrix"), 1, false, a_mvpMatrix, 0);
+        GLES20.glVertexAttribPointer(this.vertexPositionHandle, 3, GLES20.GL_FLOAT, false, 12, this.vertexBuffer);
 
-        this.tempHandle = GLES20.glGetAttribLocation(this.shaderProgram, "vPosition");
-        GLES20.glEnableVertexAttribArray(this.tempHandle);
-        GLES20.glVertexAttribPointer(this.tempHandle, 3, GLES20.GL_FLOAT, false, 12, vertexBuffer);
-        GLES20.glUniform4fv(GLES20.glGetUniformLocation(this.shaderProgram, "vColor"), 1, this.backgroundColor, 0);
+        // Set Background color
+        if (this.backgroundColor != null)
+			GLES20.glUniform4fv(GLES20.glGetUniformLocation(this.shaderProgram, "vColor"), 1, this.backgroundColor, 0);
+
+        // Set background image
+        if (this.backgroundBitmap != null)
+        {
+			// Bind the Texture and set its coordinates
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.textureIDs[0]);
+			GLES20.glEnableVertexAttribArray(this.texturePositionHandle);
+			GLES20.glVertexAttribPointer(this.texturePositionHandle, 2, GLES20.GL_FLOAT, false, 0, this.texturePositionBuffer);
+        }
+
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrder.length, GLES20.GL_UNSIGNED_SHORT, drawListBuffer);
+		GLES20.glDisableVertexAttribArray(this.vertexPositionHandle);
 
-        this.background.Draw(this.shaderProgram, this.x, this.y, this.width, this.height);
+		if (this.backgroundBitmap != null)
+			GLES20.glDisableVertexAttribArray(this.texturePositionHandle);
     }
 
     // apply the mask of this element, so sub elements won't overflow

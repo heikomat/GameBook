@@ -4,6 +4,7 @@ import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
@@ -34,6 +35,7 @@ public class GameFont
     float charWidthMax = 0;                                // Character Width (Maximum; Pixels)
     float charHeight = 0;                                  // Character Height (Maximum; Pixels)
     final float[] charWidths;                          // Width of Each Character (Actual; Pixels)
+    final Rect[] charBounds;                          // Width of Each Character (Actual; Pixels)
     float[][] charRgn;                           // Region of Each Character (Texture Coordinates)
     int cellWidth = 0, cellHeight = 0;                         // Character Cell Width/Height
     int columnCount = 0;                                // Number of Rows/Columns
@@ -44,6 +46,10 @@ public class GameFont
     private int programHandle; 						   // OpenGL Program object
     private int mColorHandle;						   // Shader color handle
     private int mTextureUniformHandle;                 // Shader texture handle
+
+    // cache-variables to prevent memory-allocations
+    int tempWidth;
+    int tempLen;
 
     private static final String vertexShaderCode =
             "uniform mat4 uMVPMatrix;      \n"     // An array representing the combined
@@ -93,10 +99,11 @@ public class GameFont
             a_fontPadX  - Integer       | x-padding between characters
             a_fontPadY  - Integer       | y-padding between characters
      */
-    public GameFont(AssetManager a_assets, String a_fontFile, int a_fontSize, int a_fontPadX, int a_fontPadY)
+    public GameFont(AssetManager a_assets, String a_fontFile, int a_fontSize, int a_fontPadX, int a_fontPadY, int a_spaceX)
     {
         this.assets = a_assets;                           // Save the Asset Manager Instance
         this.charWidths = new float[CHAR_CNT];               // Create the Array of Character Widths
+        this.charBounds = new Rect[CHAR_CNT];               // Create the Array of Character Widths
         this.charRgn = new float[CHAR_CNT][4];          // Create the Array of Character Regions
 
         // initialize remaining members
@@ -104,6 +111,7 @@ public class GameFont
         this.fontPadY = a_fontPadY;
         this.fontSize = a_fontSize;
         this.fontFile = a_fontFile;
+        this.spaceX = a_spaceX;
 
         // Sprite Batcher
         vertexValues = new float[20*maxSprites];
@@ -162,22 +170,26 @@ public class GameFont
 
         // determine the width of each character (including unknown character)
         // also determine the maximum character width
-        char[] s = new char[1];                         // Create Character Array
+        char[] s = new char[1];                 // Create Character Array
         this.charWidthMax = 0;                  // Reset Character Width/Height Maximums
-        float[] w = new float[1];                       // Working Width Value
-        int count = 0;                                    // Array Counter
+        float[] textWidth = new float[1];
+        int count = 0;                          // Array Counter
+
         for (char c = (char) this.CHAR_START; c <= this.CHAR_END; c++)  // FOR Each Character
         {
             s[0] = c;                                    // Set Character
-            paint.getTextWidths( s, 0, 1, w );           // Get Character Bounds
-            this.charWidths[count] = w[0];                      // Get Width
-            if (this.charWidths[count] > this.charWidthMax)        // IF Width Larger Than Max Width
-                this.charWidthMax = this.charWidths[count];           // Save New Max Width
-            count++;                                       // Advance Array Counter
+            paint.getTextWidths(s, 0, 1, textWidth);           // Get Character Bounds
+            this.charWidths[count] = textWidth[0];      // Get Width
+
+            if (this.charWidths[count] > this.charWidthMax) // IF Width Larger Than Max Width
+                this.charWidthMax = this.charWidths[count]; // Save New Max Width
+            count++;                                        // Advance Array Counter
         }
+
         s[0] = (char) this.CHAR_NONE;                               // Set Unknown Character
-        paint.getTextWidths( s, 0, 1, w );              // Get Character Bounds
-        this.charWidths[count] = w[0];                         // Get Width
+        paint.getTextWidths(s, 0, 1, textWidth);           // Get Character Bounds
+        this.charWidths[count] = textWidth[0];      // Get Width
+
         if (this.charWidths[count] > this.charWidthMax)           // IF Width Larger Than Max Width
             this.charWidthMax = this.charWidths[count];              // Save New Max Width
 
@@ -187,12 +199,23 @@ public class GameFont
         this.cellWidth = (int) this.charWidthMax + ( 2 * this.fontPadX );  // Set Cell Width
         this.cellHeight = (int) this.charHeight + ( 2 * this.fontPadY );  // Set Cell Height
 
-        this.columnCount = (int) Math.ceil(Math.sqrt(count));               // Calculate Number of Columns
-        int textureWidth = this.columnCount * this.cellWidth;
-        int textureHeight = (int) Math.ceil((float) this.CHAR_CNT / (float) this.columnCount) * this.cellHeight;
+        int textureSize =  (int) Math.ceil(Math.sqrt(this.cellWidth * this.cellHeight * count));
+        this.columnCount = (int) Math.floor(textureSize/this.cellWidth);               // Calculate Number of Columns
+        int rowCount = (int) Math.ceil((float) count/this.columnCount);
+
+        // if the texturesize is too small (because it's calculated using the required area,
+        // ignoring that i can't put half a character on one line, and the other half on the next)
+        // increase the textureSize by adding one row or one column, depending on what will
+        // increase the textureSize by a smaller amount
+        if (rowCount > Math.floor(textureSize/this.cellHeight))
+            textureSize = Math.min(rowCount * this.cellHeight, (this.columnCount + 1) * this.cellWidth);
+
+        // make the textureSize a power of 2
+        textureSize = (int) Math.pow(2, Math.ceil(Math.log(textureSize)/Math.log(2)));
+        this.columnCount = (int) Math.floor(textureSize / this.cellWidth);
 
         // create an empty bitmap (alpha only)
-        Bitmap bitmap = Bitmap.createBitmap( textureWidth, textureHeight, Bitmap.Config.ALPHA_8 );  // Create Bitmap
+        Bitmap bitmap = Bitmap.createBitmap(textureSize, textureSize, Bitmap.Config.ALPHA_8);  // Create Bitmap
         Canvas canvas = new Canvas( bitmap );           // Create Canvas for Rendering to Bitmap
         bitmap.eraseColor( 0x00000000 );                // Set Transparent Background (ARGB)
 
@@ -212,13 +235,13 @@ public class GameFont
             canvas.drawText(s, 0, 1, textXOffset + column * this.cellWidth, textYOffset + row * this.cellHeight, paint);
 
             // Create Region for Character
-            this.charRgn[i][0] = (float) column * this.cellWidth / textureWidth;
-            this.charRgn[i][1] = (float) row * this.cellHeight / textureHeight;
-            this.charRgn[i][2] = this.charRgn[i][0] + ((float) (this.cellWidth - 1) / textureWidth);
-            this.charRgn[i][3] = this.charRgn[i][1] + ((float) (this.cellHeight - 1) / textureHeight);
+            this.charRgn[i][0] = ((float) column * this.cellWidth) / textureSize;
+            this.charRgn[i][1] = (float) row * this.cellHeight / textureSize;
+            this.charRgn[i][2] = this.charRgn[i][0] + ((float) (this.cellWidth) / textureSize);
+            this.charRgn[i][3] = this.charRgn[i][1] + ((float) (this.cellHeight) / textureSize);
 
             column++;
-            if (column == columnCount)
+            if (column == this.columnCount)
             {
                 column = 0;
                 row++;
@@ -255,7 +278,7 @@ public class GameFont
         GLES20.glEnable(GLES20.GL_BLEND);
         GLES20.glBlendFunc(GLES20.GL_ONE, GLES20.GL_ONE);
 
-        // set color TODO: only alpha component works, text is always black #BUG
+        // TODO: Alpha seems not to be working yet. Color works
         color[0] = a_red;
         color[1] = a_green;
         color[2] = a_blue;
@@ -269,7 +292,7 @@ public class GameFont
         GLES20.glUniform1i(mTextureUniformHandle, 0);
 
         this.BeginBatch();                             // Reset Buffer Index (Empty)
-        mVPMatrix = a_vpMatrix;
+        this.mVPMatrix = a_vpMatrix;
     }
 
     /*
@@ -353,6 +376,85 @@ public class GameFont
     }
 
     /*
+        Function: Draw
+            Renders a char-array. Is faster than the string-version, because charAt() isn't needed
+
+        Parameter:
+            a_text          - char[]    | The text to render.
+            a_x             - float     | x-position of the bottom-left cordner of the text
+            a_y             - float     | y-position of the bottom-left cordner of the text
+            a_z             - float     | z-position of the bottom-left cordner of the text
+            a_rotateAngleX  - float     | rotates the text around the x-axis by a_rotateAngleX degrees
+            a_rotateAngleY  - float     | rotates the text around the y-axis by a_rotateAngleY degrees
+            a_rotateAngleZ  - float     | rotates the text around the z-axis by a_rotateAngleZ degrees
+    */
+    public void Draw(char[] a_text, float a_x, float a_y, float a_z, float a_rotateAngleX, float a_rotateAngleY, float a_rotateAngleZ)
+    {
+        float chrHeight = this.cellHeight * this.scaleY;          // Calculate Scaled Character Height
+        float chrWidth = this.cellWidth * this.scaleX;            // Calculate Scaled Character Width
+        a_x += ( chrWidth / 2.0f ) - ( this.fontPadX * this.scaleX );  // Adjust Start X
+        a_y += ( chrHeight / 2.0f ) - ( this.fontPadY * this.scaleY );  // Adjust Start Y
+
+        // create a model matrix based on x, y and angleDeg
+        Matrix.setIdentityM(this.modelMatrix, 0);
+        Matrix.translateM(this.modelMatrix, 0, a_x, a_y, a_z);
+
+        if (a_rotateAngleX != 0)
+            Matrix.rotateM(this.modelMatrix, 0, a_rotateAngleX, 0, 0, 1);
+
+        if (a_rotateAngleY != 0)
+            Matrix.rotateM(this.modelMatrix, 0, a_rotateAngleY, 1, 0, 0);
+
+        if (a_rotateAngleZ != 0)
+            Matrix.rotateM(this.modelMatrix, 0, a_rotateAngleZ, 0, 1, 0);
+
+        float letterX = 0;
+
+        chrWidth /= 2;
+        chrHeight /= 2;
+        for (int i = 0; i < a_text.length; i++)
+        {
+            int c = (int) a_text[i] - this.CHAR_START;  // Calculate Character Index (Offset by First Char in Font)
+            if (i < 0 || i >= this.CHAR_CNT)                // IF Character Not In Font
+                c = this.CHAR_UNKNOWN;                         // Set to Unknown Character Index
+
+            // Draw the buffer when it's full
+            if (numSprites == maxSprites)
+            {
+                this.EndBatch();
+                this.BeginBatch();
+            }
+
+            this.vertexValues[bufferIndex++] = letterX - chrWidth;
+            this.vertexValues[bufferIndex++] = -chrHeight;
+            this.vertexValues[bufferIndex++] = this.charRgn[c][0];
+            this.vertexValues[bufferIndex++] = this.charRgn[c][3];
+            bufferIndex++;
+
+            this.vertexValues[bufferIndex++] = letterX + chrWidth;
+            this.vertexValues[bufferIndex++] = this.vertexValues[bufferIndex - 6];
+            this.vertexValues[bufferIndex++] = this.charRgn[c][2];
+            this.vertexValues[bufferIndex++] = this.charRgn[c][3];
+            bufferIndex++;
+
+            this.vertexValues[bufferIndex++] = this.vertexValues[bufferIndex - 6];
+            this.vertexValues[bufferIndex++] = chrHeight;
+            this.vertexValues[bufferIndex++] = this.charRgn[c][2];
+            this.vertexValues[bufferIndex++] = this.charRgn[c][1];
+            bufferIndex++;
+
+            this.vertexValues[bufferIndex++] = this.vertexValues[bufferIndex - 16];
+            this.vertexValues[bufferIndex++] = this.vertexValues[bufferIndex - 6];
+            this.vertexValues[bufferIndex++] = this.charRgn[c][0];
+            this.vertexValues[bufferIndex++] = this.charRgn[c][1];
+            bufferIndex++;
+            numSprites++;
+
+            letterX += (this.charWidths[c] + this.spaceX ) * this.scaleX;    // Advance X Position by Scaled Character Width
+        }
+    }
+
+    /*
         Function: End
             Finishes the Batch-rendering of characters and Renders the text to the screen
     */
@@ -365,37 +467,34 @@ public class GameFont
     // Stars the batch-rendering
     private void BeginBatch()
     {
-        numSprites = 0;                                 // Empty Sprite Counter
-        bufferIndex = 0;
-        vertices.clear();                          // Remove Existing vertices
+        this.numSprites = 0;                                 // Empty Sprite Counter
+        this.bufferIndex = 0;
+        this.vertices.clear();                          // Remove Existing vertices
     }
 
     // Finishes the batch-rendering
     private void EndBatch()
     {
-        if (numSprites <= 0)
+        if (this.numSprites <= 0)
             return;
 
         // bind MVP matrices array to shader
-        Matrix.multiplyMM(mMVPMatrix, 0, mVPMatrix , 0, this.modelMatrix, 0);
+        Matrix.multiplyMM(this.mMVPMatrix, 0, this.mVPMatrix , 0, this.modelMatrix, 0);
         vertices.put(this.vertexValues, 0, this.bufferIndex - 1);
-        GLES20.glUniformMatrix4fv(mMVPMatricesHandle, 1, false, mMVPMatrix, 0);
-        GLES20.glEnableVertexAttribArray(mMVPMatricesHandle);
+        GLES20.glUniformMatrix4fv(this.mMVPMatricesHandle, 1, false, this.mMVPMatrix, 0);
+        GLES20.glEnableVertexAttribArray(this.mMVPMatricesHandle);
 
         // bind vertex position pointer
-        vertices.position(0);                         // Set Vertex Buffer to Position
-        GLES20.glVertexAttribPointer(1, 2, GLES20.GL_FLOAT, false, vertexSize, vertices);
+        GLES20.glVertexAttribPointer(1, 2, GLES20.GL_FLOAT, false, this.vertexSize, vertices.position(0));
         GLES20.glEnableVertexAttribArray(1);
 
         // bind texture position pointer
-        vertices.position(2);  // Set Vertex Buffer to Texture Coords (NOTE: position based on whether color is also specified)
-        GLES20.glVertexAttribPointer(2, 2, GLES20.GL_FLOAT, false, vertexSize, vertices);
+        // Set Vertex Buffer to Texture Coords (NOTE: position based on whether color is also specified)
+        GLES20.glVertexAttribPointer(2, 2, GLES20.GL_FLOAT, false, this.vertexSize, vertices.position(2));
         GLES20.glEnableVertexAttribArray(2);
 
-        indices.position(0);
-        GLES20.glDrawElements(GLES20.GL_TRIANGLES, numSprites * 6, GLES20.GL_UNSIGNED_SHORT, indices);
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, this.numSprites * 6, GLES20.GL_UNSIGNED_SHORT, indices.position(0));
         GLES20.glDisableVertexAttribArray(2);
-
     }
 
     // Loads the font-texture
@@ -431,5 +530,60 @@ public class GameFont
         GLES20.glShaderSource(shader, a_shaderCode);
         GLES20.glCompileShader(shader);
         return shader;
+    }
+
+    /*
+        Function: TextWidth
+            Gets the width of a given text if it were to be drawn with this font.
+
+        Parameter:
+            a_text  - String    | The text to render
+
+        Returns:
+            Integer -> - The witdth of the text, if it were to be drawn with this font
+    */
+    public int TextWidth(String a_text)
+    {
+        this.tempWidth = 0;
+        this.tempLen = a_text.length();
+        for (int i = 0; i < this.tempLen; i++)
+        {
+            int c = (int) a_text.charAt(i) - this.CHAR_START;  // Calculate Character Index (Offset by First Char in Font)
+            if (i < 0 || i >= this.CHAR_CNT)                // IF Character Not In Font
+                c = this.CHAR_UNKNOWN;                         // Set to Unknown Character Index
+
+            this.tempWidth += (this.charWidths[c] + this.spaceX ) * this.scaleX;    // Advance X Position by Scaled Character Width
+        }
+        return tempWidth;
+    }
+
+    /*
+        Function: TextWidth
+            Gets the width of a given text if it were to be drawn with this font.
+            Is faster than the string-version, because charAt() isn't needed.
+
+        Parameter:
+            a_text  - char[]    | The text to render
+
+        Returns:
+            Integer -> - The witdth of the text, if it were to be drawn with this font
+    */
+    public int TextWidth(char[] a_text)
+    {
+        this.tempWidth = 0;
+        for (int i = 0; i < a_text.length; i++)
+        {
+            int c = (int) a_text[i] - this.CHAR_START;  // Calculate Character Index (Offset by First Char in Font)
+            if (i < 0 || i >= this.CHAR_CNT)                // IF Character Not In Font
+                c = this.CHAR_UNKNOWN;                         // Set to Unknown Character Index
+
+            this.tempWidth += (this.charWidths[c] + this.spaceX ) * this.scaleX;    // Advance X Position by Scaled Character Width
+        }
+        return tempWidth;
+    }
+
+    public int TextHeight()
+    {
+        return this.cellHeight;
     }
 }

@@ -15,12 +15,13 @@ public class GameElement
     public GameElement parent;                      // Reference to the GameElement that acts as the Parent of this elemente
 
     public Object value;                            // the current value of the element
-    public int x = 0;                             // the x-position of the element
-    public int y = 0;                             // the y-position of the element
-    public int width = 0;                         // The width of the elemenet
-    public int height = 0;                        // The height of the element
+    public int x = 0;                               // the x-position of the element
+    public int y = 0;                               // the y-position of the element
+    public int width = 0;                           // The width of the elemenet
+    public int height = 0;                          // The height of the element
     public boolean visible = true;                  // true: The GameElement is visible, false: The GameElement is not visible
     public boolean hideOverflow = false;            // true: childelements visually can't be oudside this element, false: they can
+    public int zIndex = 0;                          // z-index of the Element. Elements with a lower z-index will be drawn first (below other pages)
 
     // cache-variables to prevent memory-allocations
     public GameStack<GAnimation> animations;        // Stack of the currently active animations

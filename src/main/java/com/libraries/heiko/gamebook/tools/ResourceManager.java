@@ -117,14 +117,32 @@ public class ResourceManager
         Returns:
             GameFont -> - The Loaded font
     */
-    public GameFont AddFont(String a_id, String a_font, int a_fontSize, int a_padX, int a_padY)
+    public GameFont AddFont(String a_id, String a_font, int a_fontSize, int a_padX, int a_padY, int a_spaceX)
     {
-        tempFont =  new GameFont(this.book.getContext().getAssets(), a_font, a_fontSize, a_padX, a_padY);
+        tempFont =  new GameFont(this.book.getContext().getAssets(), a_font, a_fontSize, a_padX, a_padY, a_spaceX);
         this._AddResource(a_id, this.fonts, tempFont);
         if (this.book.gameRenderer.oglReady == true)
             tempFont.Load();
 
         return (GameFont) this._GetResource(a_id, this.fonts);
+    }
+
+    /*
+        Function: AddFont
+            Stores an image using an id to later retrieve it. letter-padding is set to 2px
+
+        Parameter:
+            a_id        - String    | ID of the stored font
+            a_font      - String    | path of the font-file inside the assets-folder
+            a_fontSize  - Integer   | FontSize to use
+            a_spaceX    - Integer   | FontSpacing to use
+
+        Returns:
+            GameFont -> - The Loaded font
+    */
+    public GameFont AddFont(String a_id, String a_font, int a_fontSize, int a_spaceX)
+    {
+        return this.AddFont(a_id, a_font, a_fontSize, 2, 2, a_spaceX);
     }
 
     /*
@@ -141,7 +159,7 @@ public class ResourceManager
     */
     public GameFont AddFont(String a_id, String a_font, int a_fontSize)
     {
-        return this.AddFont(a_id, a_font, a_fontSize, 2, 2);
+        return this.AddFont(a_id, a_font, a_fontSize, 2, 2, 0);
     }
 
     /*

@@ -12,8 +12,10 @@ import com.libraries.heiko.gamebook.tools.GameFont;
  */
 public class Label extends BaseElement
 {
-    private GameFont font;                    // current font
+    private GameFont font;                  // current font
     private int fontColor = Color.WHITE;    // current font-color
+    private boolean sizeSet = false;        // true: the size was set when the text changed, false: the size was not set
+    private char[] text;                    // holds a char-array version of the current value
 
     public Label(String a_id, GamePage a_page, GameBook a_book, GameElement a_parent, GameFont a_font)
     {
@@ -32,7 +34,22 @@ public class Label extends BaseElement
     {
         this.font = a_font;
         this.SetColor("#FFFFFF");
-        this.value = a_text;
+        this.SetValue(a_text);
+    }
+
+    @Override
+    public void SetValue(Object a_value)
+    {
+        this.value = a_value;
+        this.text = ((String) a_value).toCharArray();
+
+        if (this.font.fontLoaded)
+        {
+            this.SetSize(this.font.TextWidth(this.text), this.font.TextHeight());
+            this.sizeSet = true;
+        }
+        else
+            this.sizeSet = false;
     }
 
     /*
@@ -51,11 +68,22 @@ public class Label extends BaseElement
     // Draws the Label on the framebuffer
     public void _Draw(float[] a_mvpMatrix)
     {
+
         if (this.font.fontLoaded == false)
             return;
 
-        this.font.Begin( 1.0f, 1.0f, 1.0f, 1.0f, a_mvpMatrix );             // Begin Text Rendering (Set Color BLUE)
-        this.font.Draw( (String) this.value, this.x, this.y, 0, 0, 0, 0);   // Draw Test String
+        if (this.sizeSet == false)
+        {
+            this.SetSize(this.font.TextWidth((String) this.value), this.font.TextHeight());
+            this.sizeSet = true;
+        }
+
+        if (this.shaderProgram != 0)
+            this.DrawBasics(a_mvpMatrix);
+
+        // TODO: Set correct fontColor (this.fontColor)
+        this.font.Begin( 1.0f, 1.0f, 1.0f, 1.0f, a_mvpMatrix );
+        this.font.Draw(this.text, this.x, this.y, 0, 0, 0, 0);
         this.font.End();
     }
 }
