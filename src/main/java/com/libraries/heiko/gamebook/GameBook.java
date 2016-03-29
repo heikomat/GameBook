@@ -36,7 +36,8 @@ public class GameBook extends GLSurfaceView
         this.screenWidth = a_context.getResources().getDisplayMetrics().widthPixels;
         this.screenHeight = a_context.getResources().getDisplayMetrics().heightPixels;
         pages = new GameStack<GamePage>();
-
+        // TODO: Handle Instance changes (like orientation change).
+        // TODO: At the moment, an orientationchange rebuilds the whole view and eats memory
 
         // initiate the resource-stacks
         this.resources = new ResourceManager(this);
@@ -44,9 +45,11 @@ public class GameBook extends GLSurfaceView
         // Set OpenGL ES Version 2 and initiate the renderer
         this.gameRenderer = new GameRenderer(this, 60);
         setEGLContextClientVersion(2);
+
+        // Set the OpenGL-stencil size to 8 bit
+        setEGLConfigChooser(8, 8, 8, 8, 16, 8);
         this.setRenderer(this.gameRenderer);
         setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
-
 
         // Initiate the GameThread and start it
         this.gameThread = new GameThread(this, 100);

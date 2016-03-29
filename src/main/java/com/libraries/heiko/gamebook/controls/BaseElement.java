@@ -34,13 +34,22 @@ public class BaseElement extends GameElement
     private int colorShaderProgram;						// the ShaderProgram to use when only a backgroundColor is set
     private int imageShaderProgram;						// the ShaderProgram to use when only a backgroundImage is set
     private int colorAndImageShaderProgram;				// the ShaderProgram to use when both backgroundColor and backgroundImage are set
+    public int stencilProgram;                          // the ShaderProgram to use when applying the mask
     public int shaderProgram;							// the currently used shaderProgram based on the set backgroundColor and backgroundImage
 														// needs to be public, so subclasses can decide not to call DrawBasics if not needed
 
 	// Variables necessary for positioning the vertices
-	private float coords[] = {0, 0, 0,  0, 0, 0,  0, 0, 0,  0, 0, 0};						// The coordinates of the 6 vertices of the rect
+	private float coords[] = {0, 0, 0,  0, 1, 0,  1, 1, 0,  1, 0, 0};						// The coordinates of the 6 vertices of the rect
+                                                                                            // The values represent the whole screen. they only
+                                                                                            // get ues once in the constructor, and will be overwritten
+                                                                                            // with the actual position directly afterwards
+
 	private FloatBuffer vertexBuffer;														// Buffer holding the coordinates from coords
 	private int vertexPositionHandle = 0;													// Handle to vPosition in the vertexShaders
+    private int stencilVertexPositionHandle = 0;                                            // Handle to vPosition in the stencil-vertexShader
+
+    // Variables necessary for fullscreen-stencil-reset
+    private FloatBuffer fullscreenVertexBuffer;											    // Buffer holding the coordinates from coords
 
 	// Variables necessary to determine the drawOrder of the vertices
 	private short drawOrder[] = {0, 1, 2, 0, 2, 3};											// The order in which to draw the vertices
@@ -112,6 +121,15 @@ public class BaseElement extends GameElement
         "						bgColor.a * texture.a);" +
         "}";
 
+    // The fragment-shader to use when editing the current stencil
+    public final String stencilFragmentShaderCode =
+        "precision mediump float;" +
+        "uniform vec4 vColor;" +
+        "void main()" +
+        "{" +
+        "   gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);" +
+        "}";
+
     public BaseElement(String a_id, GamePage a_page, GameBook a_book, GameElement a_parent)
     {
         super(a_id, a_page, a_book, a_parent);
@@ -121,6 +139,10 @@ public class BaseElement extends GameElement
         ByteBuffer vertexByteBuffer = ByteBuffer.allocateDirect(this.coords.length * 4);
         this.vertexBuffer = vertexByteBuffer.order(ByteOrder.nativeOrder()).asFloatBuffer();
 
+        vertexByteBuffer = ByteBuffer.allocateDirect(this.coords.length * 4);
+        this.fullscreenVertexBuffer = vertexByteBuffer.order(ByteOrder.nativeOrder()).asFloatBuffer();
+        this.fullscreenVertexBuffer.put(this.coords).position(0);
+
 		ByteBuffer textureByteBuffer = ByteBuffer.allocateDirect(texturePositions.length * 4);
 		this.texturePositionBuffer = textureByteBuffer.order(ByteOrder.nativeOrder()).asFloatBuffer();
 
@@ -129,6 +151,9 @@ public class BaseElement extends GameElement
         this.drawListBuffer = dlb.order(ByteOrder.nativeOrder()).asShortBuffer();
         this.drawListBuffer.put(this.drawOrder).position(0);
         this._posToVertices();
+
+        if (this.book.gameRenderer.oglReady == true)
+            this._OGLReady();
     }
 
     public void _OGLReady()
@@ -148,6 +173,12 @@ public class BaseElement extends GameElement
         GLES20.glAttachShader(this.colorAndImageShaderProgram, this._LoadShader(GLES20.GL_VERTEX_SHADER, this.textureVertexShaderCode));
         GLES20.glAttachShader(this.colorAndImageShaderProgram, this._LoadShader(GLES20.GL_FRAGMENT_SHADER, this.colorAndImageFragmentShaderCode));
         GLES20.glLinkProgram(this.colorAndImageShaderProgram);
+
+        this.stencilProgram = GLES20.glCreateProgram();
+        GLES20.glAttachShader(this.stencilProgram, this._LoadShader(GLES20.GL_VERTEX_SHADER, this.colorVertexShaderCode));
+        GLES20.glAttachShader(this.stencilProgram, this._LoadShader(GLES20.GL_FRAGMENT_SHADER, this.stencilFragmentShaderCode));
+        GLES20.glLinkProgram(this.stencilProgram);
+        this.stencilVertexPositionHandle = GLES20.glGetAttribLocation(this.stencilProgram, "vPosition");
 
         // Create a texture and get its ID
         GLES20.glGenTextures(1, this.textureIDs, 0);
@@ -337,7 +368,7 @@ public class BaseElement extends GameElement
         if (this.shaderProgram == 0)
             return;
 
-        // Make OpenGL use the newly created program
+        // Make use of the current Program and the currently set stencil
 		GLES20.glUseProgram(this.shaderProgram);
 
         // Enable blending for premultiplied alpha
@@ -371,9 +402,49 @@ public class BaseElement extends GameElement
     }
 
     // apply the mask of this element, so sub elements won't overflow
-    public void _ApplyMask(float[] a_mvpMatrix)
+    public int _ApplyMask(float[] a_mvpMatrix, int a_zIndex)
     {
-        // TODO: Apply some kind of mask
+        if (this.stencilProgram == 0)
+            return a_zIndex;
+
+        GLES20.glUseProgram(this.stencilProgram);
+
+        // Initialize Stencil-manipulation
+        GLES20.glEnable(GLES20.GL_STENCIL_TEST);
+        GLES20.glColorMask(false, false, false, false);
+        GLES20.glDepthMask(false);
+        GLES20.glStencilMask(0xFF);
+
+        if (a_zIndex == 255)
+        {
+            // TODO: Test, if this actually works
+            // flip the zIndex, because the maximum depth has been reached
+            // who the fuck uses more than 255 GUI-Elements inside one another?
+            GLES20.glStencilFunc(GLES20.GL_EQUAL, a_zIndex, 0xFF);
+            GLES20.glStencilOp(GLES20.GL_ZERO, GLES20.GL_ZERO, 5);
+
+            // clear the whole stencil-buffer with 0, except where its 255, set it to 1 there
+            GLES20.glEnableVertexAttribArray(this.stencilVertexPositionHandle);
+            GLES20.glUniformMatrix4fv(GLES20.glGetUniformLocation(this.stencilProgram, "uMVPMatrix"), 1, false, a_mvpMatrix, 0);
+            GLES20.glVertexAttribPointer(this.stencilVertexPositionHandle, 3, GLES20.GL_FLOAT, false, 12, this.fullscreenVertexBuffer);
+            GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrder.length, GLES20.GL_UNSIGNED_SHORT, drawListBuffer);
+            a_zIndex = 1;
+        }
+
+        // make it increase the stencil value by one for the whole area
+        GLES20.glStencilFunc(GLES20.GL_ALWAYS, 0, 0xFF);
+        GLES20.glStencilOp(GLES20.GL_KEEP, GLES20.GL_KEEP, GLES20.GL_INCR);
+
+        // Set the view-projecton-matrix and the vertex-position
+        GLES20.glEnableVertexAttribArray(this.stencilVertexPositionHandle);
+        GLES20.glUniformMatrix4fv(GLES20.glGetUniformLocation(this.stencilProgram, "uMVPMatrix"), 1, false, a_mvpMatrix, 0);
+        GLES20.glVertexAttribPointer(this.stencilVertexPositionHandle, 3, GLES20.GL_FLOAT, false, 12, this.vertexBuffer);
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrder.length, GLES20.GL_UNSIGNED_SHORT, drawListBuffer);
+
+        // switch back to regular non-stencil rendering
+        GLES20.glEnable(GLES20.GL_TEXTURE_2D);
+        GLES20.glColorMask(true, true, true, true);
+        return a_zIndex + 1;
     }
 
     // creates a shader of a given type an compiles a given sourceCode into it

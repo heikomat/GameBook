@@ -1,5 +1,7 @@
 package com.libraries.heiko.gamebook;
 
+import android.opengl.GLES20;
+
 import com.libraries.heiko.gamebook.controls.Label;
 import com.libraries.heiko.gamebook.controls.Sheet;
 import com.libraries.heiko.gamebook.tools.GameFont;
@@ -69,7 +71,8 @@ public class GamePage
         this.renderElements = elements;
         while (this.renderElements.content != null)
         {
-            this.renderElements.content.Draw(a_mvpMatrix);
+            GLES20.glClear(GLES20.GL_STENCIL_BUFFER_BIT);
+            this.renderElements.content.Draw(a_mvpMatrix, 0);
             this.renderElements = this.renderElements.next;
         }
     }

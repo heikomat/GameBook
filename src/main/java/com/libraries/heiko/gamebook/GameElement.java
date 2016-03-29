@@ -1,5 +1,6 @@
 package com.libraries.heiko.gamebook;
 
+import android.opengl.GLES20;
 import android.opengl.Matrix;
 
 import com.libraries.heiko.gamebook.tools.GameStack;
@@ -147,7 +148,7 @@ public class GameElement
         this.y = a_y;
     }
 
-    // Führt frame-updates aus, die für alle Elemente gelten, und update die child-Elemente
+    // calculates frame-updates that are valid for all element-types and updates the child-elemente
     public final void Update(long a_timeDelta, double a_timeFactor)
     {
         this.tempAnimations = this.animations;
@@ -167,7 +168,7 @@ public class GameElement
     }
 
     // Draws this element and all its child-elements to the framebuffer
-    public final void Draw(float[] a_mvpMatrix)
+    public final void Draw(float[] a_mvpMatrix, int a_zIndex)
     {
         if (!this.visible)
             return;
@@ -178,16 +179,22 @@ public class GameElement
             this.drawAnimations.content.Apply(a_mvpMatrix);
             this.drawAnimations = this.drawAnimations.next;
         }
+
+		// activate the usage of the currently set stencil/mask and draw the Element
+        GLES20.glDepthMask(true);
+        GLES20.glStencilMask(0x00);
+        GLES20.glStencilFunc(GLES20.GL_EQUAL, a_zIndex, 0xFF);
         this._Draw(a_mvpMatrix);
 
+        // apply masks, this potentially increases the z-index
         if (this.hideOverflow)
-            this._ApplyMask(a_mvpMatrix);
+            a_zIndex = this._ApplyMask(a_mvpMatrix, a_zIndex);
 
         Matrix.translateM(a_mvpMatrix, 0, this.x, this.y, 0);
         this.drawElements = this.children;
         while (this.drawElements.content != null)
         {
-            this.drawElements.content.Draw(a_mvpMatrix);
+            this.drawElements.content.Draw(a_mvpMatrix, a_zIndex);
             this.drawElements = this.drawElements.next;
         }
         Matrix.translateM(a_mvpMatrix, 0, -this.x, -this.y, 0);
@@ -200,7 +207,7 @@ public class GameElement
         this.drawElements = this.children;
         while (this.drawElements.content != null)
         {
-            this.drawElements.content._OGLReady();
+            this.drawElements.content.OGLReady();
             this.drawElements = this.drawElements.next;
         }
     }
@@ -222,7 +229,8 @@ public class GameElement
     }
 
     // placeholder for the _ApplyMask-function. Can be overwritten by the actual controls
-    public void _ApplyMask(float[] a_mvpMatrix)
+    public int _ApplyMask(float[] a_mvpMatrix, int a_zIndex)
     {
+        return a_zIndex;
     }
 }
