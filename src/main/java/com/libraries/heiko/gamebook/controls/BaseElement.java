@@ -442,8 +442,8 @@ public class BaseElement extends GameElement
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, drawOrder.length, GLES20.GL_UNSIGNED_SHORT, drawListBuffer);
 
         // switch back to regular non-stencil rendering
-        GLES20.glEnable(GLES20.GL_TEXTURE_2D);
         GLES20.glColorMask(true, true, true, true);
+
         return a_zIndex + 1;
     }
 

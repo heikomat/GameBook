@@ -35,6 +35,9 @@ public class GameElement
     private GameStack<GameElement> tempElements;    // used by everything but the Draw function to iterate through the child-elements
     private GameElement tempElement;                // used to cache a GameElement
 
+    // OpenGL-Stuff
+    float[] elementMvpMatrix;
+
     public GameElement(String a_id, GamePage a_page, GameBook a_book, GameElement a_parent)
     {
         this.id = a_id;
@@ -44,6 +47,7 @@ public class GameElement
 
         this.children = new GameStack<GameElement>();
         this.animations = new GameStack<GAnimation>();
+        this.elementMvpMatrix = new float[16];
     }
 
     /*
@@ -173,31 +177,38 @@ public class GameElement
         if (!this.visible)
             return;
 
+        for (int i = 0; i < 16; i++)
+        {
+            this.elementMvpMatrix[i] = a_mvpMatrix[i];
+        }
+
+
+		Matrix.translateM(this.elementMvpMatrix, 0, this.x + (float) this.width/2, this.y + (float) this.height/2, 0);
         this.drawAnimations = this.animations;
         while (this.drawAnimations.content != null)
         {
-            this.drawAnimations.content.Apply(a_mvpMatrix);
+            this.drawAnimations.content.Apply(this.elementMvpMatrix);
             this.drawAnimations = this.drawAnimations.next;
         }
+		Matrix.translateM(this.elementMvpMatrix, 0, (float) -this.width/2 - this.x, -(float) this.height/2 - this.y, 0);
 
 		// activate the usage of the currently set stencil/mask and draw the Element
         GLES20.glDepthMask(true);
         GLES20.glStencilMask(0x00);
         GLES20.glStencilFunc(GLES20.GL_EQUAL, a_zIndex, 0xFF);
-        this._Draw(a_mvpMatrix);
+        this._Draw(this.elementMvpMatrix);
 
         // apply masks, this potentially increases the z-index
         if (this.hideOverflow)
-            a_zIndex = this._ApplyMask(a_mvpMatrix, a_zIndex);
+            a_zIndex = this._ApplyMask(this.elementMvpMatrix, a_zIndex);
 
-        Matrix.translateM(a_mvpMatrix, 0, this.x, this.y, 0);
+        Matrix.translateM(this.elementMvpMatrix, 0, this.x, this.y, 0);
         this.drawElements = this.children;
         while (this.drawElements.content != null)
         {
-            this.drawElements.content.Draw(a_mvpMatrix, a_zIndex);
+            this.drawElements.content.Draw(this.elementMvpMatrix, a_zIndex);
             this.drawElements = this.drawElements.next;
         }
-        Matrix.translateM(a_mvpMatrix, 0, -this.x, -this.y, 0);
     }
 
     // Draws this element and all its child-elements to the framebuffer

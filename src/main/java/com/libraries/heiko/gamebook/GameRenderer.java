@@ -51,8 +51,11 @@ public class GameRenderer implements GLSurfaceView.Renderer
 
         // define projection-matrix(orthoM) and set the camera-position (View matrix)
         Matrix.orthoM(ProjectionMatrix, 0, 0, a_width, 0, a_height, -1, 10);
-        //Matrix.orthoM(ProjectionMatrix, 0, 0, a_width, 0, a_height, -1, 10);
-        Matrix.setLookAtM(viewMatrix, 0, 0, 0, 1, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
+        Matrix.setLookAtM(viewMatrix, 0,   0, 0, 1,   0, 0, 0,   0, 1, 1);
+
+        // TODO: Find Frustum-settings that work
+        //Matrix.frustumM(ProjectionMatrix, 0, 0, a_width, 0, a_height, 1, 10);
+        //Matrix.setLookAtM(viewMatrix, 0,   0, 0, 2,   0, 0, 0,   0, 1, 1);
 
         // Calculate the projection and view transformation, and pass the result to the transformation matrix of the vertexShader-program
         Matrix.multiplyMM(mvpMatrix, 0, ProjectionMatrix, 0, viewMatrix, 0);
