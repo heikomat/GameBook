@@ -55,7 +55,7 @@ public class GamePage
             return;
 
         this.temp = this.elements;
-        while (this.temp.content != null)
+        while (this.temp != null && this.temp.content != null)
         {
             this.temp.content.Update(a_timeDelta, a_timeFactor);
             this.temp = this.temp.next;
@@ -71,6 +71,7 @@ public class GamePage
         this.renderElements = elements;
         while (this.renderElements.content != null)
         {
+            GLES20.glStencilMask(0xFF);
             GLES20.glClear(GLES20.GL_STENCIL_BUFFER_BIT);
             this.renderElements.content.Draw(a_mvpMatrix, 0);
             this.renderElements = this.renderElements.next;
@@ -91,6 +92,20 @@ public class GamePage
         }
     }
 
+    // gets called when the screen changes (e.g. on orientiation change, and on startup)
+    public void _UpdateScreenDimensions(float a_horzVertexRatio, float a_vertVertexRatio)
+    {
+        if (this.elements == null)
+            return;
+
+        this.renderElements = elements;
+        while (this.renderElements.content != null)
+        {
+            this.renderElements.content.UpdateScreenDimensions(a_horzVertexRatio, a_vertVertexRatio);
+            this.renderElements = this.renderElements.next;
+        }
+    }
+
     /*
         Function: GetElement
             Returns the GameElement with the given ID
@@ -104,13 +119,13 @@ public class GamePage
     public GameElement GetElement(String a_id)
     {
         this.temp = this.elements;
-        while (this.temp.content != null)
+        while (this.temp != null && this.temp.content != null)
         {
             if (this.temp.content.id.equals(a_id))
                 return this.temp.content;
 
             this.tempElement = this.temp.content.GetElement(a_id);
-            if (this.tempElement != null)
+            if (this.tempElement != null && this.tempElement != null)
                 return this.tempElement;
 
             this.temp = this.temp.next;
@@ -126,7 +141,7 @@ public class GamePage
     public void RemoveAllElements()
     {
         this.temp = this.elements;
-        while (this.temp.content != null)
+        while (this.temp != null && this.temp.content != null)
         {
             this._RemoveElement(this.temp);
         }
@@ -150,7 +165,7 @@ public class GamePage
         else
         {
             this.temp = this.elements;
-            while (this.temp.content != null)
+            while (this.temp != null && this.temp.content != null)
             {
                 if (this.temp.content.id.equals(a_id))
                 {

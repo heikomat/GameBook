@@ -12,11 +12,24 @@ import javax.microedition.khronos.opengles.GL10;
  */
 public class GameRenderer implements GLSurfaceView.Renderer
 {
-    private final float[] mvpMatrix = new float[16];           // holds the final mvp-matrix for the vertexShader-program (MVP Matrix = Model View Projection Matrix)
-    private final float[] ProjectionMatrix = new float[16];    // used to make object not look streched due to screen-ratio
-    private final float[] viewMatrix = new float[16];          // used to define where the camera is
-    private long lastFrameTime = 0;                            // stores when the last frame finished rendering
-    public boolean oglReady = false;                           // flag that indicates wether OpenGL is ready to be used
+    private final float[] mvpMatrix = new float[16];            // holds the final mvp-matrix for the vertexShader-program (MVP Matrix = Model View Projection Matrix)
+    private final float[] projectionMatrix = new float[16];     // used to make object not look streched due to screen-ratio
+    private final float[] viewMatrix = new float[16];           // used to define where the camera is
+    private long lastFrameTime = 0;                             // stores when the last frame finished rendering
+    private int displayWidth = 0;                               // stores the current DisplayWidth, so the projection-matrix can be changed later on
+    private int displayHeight = 0;                              // stores the current DisplayHeight, so the projection-matrix can be changed later on
+    private RenderMode renderMode = RenderMode.TWOD;			// stores the current renderMode
+    public boolean oglReady = false;                           	// flag that indicates wether OpenGL is ready to be used
+
+    // screen-position and size
+    public float left = 0;
+    public float right = 0;
+    public float bottom = 0;
+    public float top = 0;
+    public float width = 0;
+    public float height = 0;
+    public float horzVertexRatio = 0;
+    public float vertVertexRatio = 0;
 
     // GameBook stuff
     private GameBook gamebook;                                  // Reference to the GameBook-Instance to call the _Draw function
@@ -36,29 +49,66 @@ public class GameRenderer implements GLSurfaceView.Renderer
 
     public void onSurfaceCreated(GL10 a_gl, EGLConfig a_config)
     {
-        this.oglReady = true;
-        this.gamebook._OGLReady();
-
         // Make the Background black
         GLES20.glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
     }
 
     public void onSurfaceChanged(GL10 a_gl, int a_width, int a_height)
     {
-        // TODO: Implement a displaySize-independent game-size
-        // make OpenGL use the new screen-size
-        GLES20.glViewport(0, 0, a_width, a_height);
+        this.oglReady = true;
+        this.gamebook._OGLReady();
 
-        // define projection-matrix(orthoM) and set the camera-position (View matrix)
-        Matrix.orthoM(ProjectionMatrix, 0, 0, a_width, 0, a_height, -1, 10);
-        Matrix.setLookAtM(viewMatrix, 0,   0, 0, 1,   0, 0, 0,   0, 1, 1);
+        this.displayWidth = a_width;
+        this.displayHeight = a_height;
+
+        // make OpenGL use the new screen-size
+        GLES20.glViewport(0, 0, this.displayWidth, this.displayHeight);
+        this.SetRenderMode(this.renderMode);
+    }
+
+    // Sets the RenderMode (2D or 3D)
+    public void SetRenderMode(RenderMode a_renderMode)
+    {
+        this.renderMode = a_renderMode;
+        if (!this.oglReady)
+            return;
 
         // TODO: Find Frustum-settings that work
-        //Matrix.frustumM(ProjectionMatrix, 0, 0, a_width, 0, a_height, 1, 10);
-        //Matrix.setLookAtM(viewMatrix, 0,   0, 0, 2,   0, 0, 0,   0, 1, 1);
+        // define projection-matrix and set the camera-position (View matrix)
+        float ratio = (float) this.gamebook.gameWidth / this.gamebook.gameHeight;
+        this.left = -ratio;
+        this.right = ratio;
+        this.bottom = -1;
+        this.top = 1;
+        this.width = this.right - this.left;
+        this.height = this.top - this.bottom;
+        this.horzVertexRatio = this.width/this.displayWidth;
+        this.vertVertexRatio = this.height/this.displayHeight;
 
-        // Calculate the projection and view transformation, and pass the result to the transformation matrix of the vertexShader-program
-        Matrix.multiplyMM(mvpMatrix, 0, ProjectionMatrix, 0, viewMatrix, 0);
+        if (this.renderMode == RenderMode.TWOD)
+        {
+            // Matrix.orthoM(projectionMatrix, 0,   0, ratio,   0, 1,   -1, 10);
+            Matrix.orthoM(projectionMatrix, 0,   this.left, this.right,   this.bottom, this.top,   -1, 10);
+        }
+        else if (this.renderMode == RenderMode.THREED)
+        {
+            Matrix.frustumM(projectionMatrix, 0,  this.left, this.right,   this.bottom, this.top, 1, 100);
+            //Matrix.frustumM(projectionMatrix, 0,  -ratio/2, ratio/2, -0.5f, 0.5f, 1, 100);
+            //Matrix.frustumM(projectionMatrix, 0,  0, ratio, 0, 1, 1, 100);
+
+        }
+        else
+            throw new Error("unknown render-mode " + a_renderMode);
+
+        Matrix.setLookAtM(viewMatrix, 0,   0, 0, 1,   0, 0, 0,   0, 1, 0);
+        Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
+
+        //scale, so the ingame-coordinates fall in the area from 0 to 1
+        //Matrix.scaleM(mvpMatrix, 0, 1f/this.gamebook.gameHeight, 1f/this.gamebook.gameHeight, 1);
+        if (this.renderMode == RenderMode.THREED)
+            Matrix.scaleM(mvpMatrix, 0, 2, 2, 1);
+
+        this.gamebook._UpdateScreenDimensions(this.horzVertexRatio, this.vertVertexRatio);
     }
 
     // gets called every time a Frame can be drawn. Draws the current scene
@@ -72,4 +122,6 @@ public class GameRenderer implements GLSurfaceView.Renderer
         this.gamebook.lastDrawFPS = 1000000000/(System.nanoTime() - this.lastFrameTime);
         this.lastFrameTime = System.nanoTime();
     }
+
+    public enum RenderMode {TWOD, THREED}
 }

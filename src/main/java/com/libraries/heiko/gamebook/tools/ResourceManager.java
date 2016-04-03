@@ -122,8 +122,10 @@ public class ResourceManager
         tempFont =  new GameFont(this.book.getContext().getAssets(), a_font, a_fontSize, a_padX, a_padY, a_spaceX);
         this._AddResource(a_id, this.fonts, tempFont);
         if (this.book.gameRenderer.oglReady == true)
+        {
             tempFont.Load();
-
+            tempFont.SetDisplayScale(this.book.gameRenderer.horzVertexRatio, this.book.gameRenderer.vertVertexRatio);
+        }
         return (GameFont) this._GetResource(a_id, this.fonts);
     }
 
@@ -182,6 +184,16 @@ public class ResourceManager
             if (!((GameFont) this.tempStack.content.resource).fontLoaded)
                 ((GameFont) this.tempStack.content.resource).Load();
 
+            this.tempStack = this.tempStack.next;
+        }
+    }
+
+    public void _UpdateScreenDimensions(float a_horzVertexRatio, float a_vertVertexRatio)
+    {
+        this.tempStack = this.fonts;
+        while (this.tempStack.content != null)
+        {
+            ((GameFont) this.tempStack.content.resource).SetDisplayScale(a_horzVertexRatio, a_vertVertexRatio);
             this.tempStack = this.tempStack.next;
         }
     }

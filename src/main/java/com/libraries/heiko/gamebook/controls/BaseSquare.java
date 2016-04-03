@@ -17,7 +17,7 @@ import java.nio.ShortBuffer;
 /**
  * Created by heiko on 23.02.2016.
  */
-public class BaseElement extends GameElement
+public class BaseSquare extends GameElement
 {
     private int borderRadius = 0;                       // Current border-radius
     private float[] backgroundColor;                    // Current background-color
@@ -39,10 +39,13 @@ public class BaseElement extends GameElement
 														// needs to be public, so subclasses can decide not to call DrawBasics if not needed
 
 	// Variables necessary for positioning the vertices
-	private float coords[] = {0, 0, 0,  0, 1, 0,  1, 1, 0,  1, 0, 0};						// The coordinates of the 6 vertices of the rect
-                                                                                            // The values represent the whole screen. they only
-                                                                                            // get ues once in the constructor, and will be overwritten
-                                                                                            // with the actual position directly afterwards
+	private float coords[] =                                                                // The coordinates of the 6 vertices of the rect
+    {                                                                                       // The values represent the whole screen. they only
+            0, 0, -(this.zIndex + 1),                                                       // get ues once in the constructor, and will be overwritten
+            0, 1, -(this.zIndex + 1),                                                       // with the actual position directly afterwards
+            1, 1, -(this.zIndex + 1),
+            1, 0, -(this.zIndex + 1)
+    };
 
 	private FloatBuffer vertexBuffer;														// Buffer holding the coordinates from coords
 	private int vertexPositionHandle = 0;													// Handle to vPosition in the vertexShaders
@@ -130,7 +133,7 @@ public class BaseElement extends GameElement
         "   gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);" +
         "}";
 
-    public BaseElement(String a_id, GamePage a_page, GameBook a_book, GameElement a_parent)
+    public BaseSquare(String a_id, GamePage a_page, GameBook a_book, GameElement a_parent)
     {
         super(a_id, a_page, a_book, a_parent);
         this.SetBoxStyle(this.borderRadius, null, null, this.borderWidth);
@@ -187,35 +190,33 @@ public class BaseElement extends GameElement
 
     public void SetSize(int a_width, int a_height)
     {
-        this.width = a_width;
-        this.height = a_height;
+        super.SetSize(a_width, a_height);
         this._posToVertices();
     }
 
     public void SetPosition(int a_x, int a_y)
     {
-        this.x = a_x;
-        this.y = a_y;
+        super.SetPosition(a_x, a_y);
         this._posToVertices();
     }
 
     private void _posToVertices()
     {
         // top left
-        this.coords[0] = this.x;
-        this.coords[1] = this.y;
+        this.coords[0] = this.vectorX;
+        this.coords[1] = this.vectorY;
 
         // bottom left
-        this.coords[3] = this.x;
-        this.coords[4] = this.y + this.height;
+        this.coords[3] = this.vectorX;
+        this.coords[4] = this.vectorY + this.vectorHeight;
 
         // bottom right
-        this.coords[6] = this.x + this.width;
-        this.coords[7] = this.y + this.height;
+        this.coords[6] = this.vectorX + this.vectorWidth;
+        this.coords[7] = this.vectorY + this.vectorHeight;
 
         // top right
-        this.coords[9] = this.x + this.width;
-        this.coords[10] = this.y;
+        this.coords[9] = this.vectorX + this.vectorWidth;
+        this.coords[10] = this.vectorY;
 
         // create a floating point buffer from the ByteBuffer, add the coordinates to it,
         // and make it read from the beginning of the buffer
@@ -311,6 +312,7 @@ public class BaseElement extends GameElement
 		this.texturePositionBuffer.put(this.texturePositions).position(0);
     }
 
+    // Sets the shader-program to use, depending on the backgroundImage and backgroundColor currently set
     private void _UpdateShaderProgram()
     {
         if (this.book.gameRenderer.oglReady == false)
@@ -412,7 +414,6 @@ public class BaseElement extends GameElement
         // Initialize Stencil-manipulation
         GLES20.glEnable(GLES20.GL_STENCIL_TEST);
         GLES20.glColorMask(false, false, false, false);
-        GLES20.glDepthMask(false);
         GLES20.glStencilMask(0xFF);
 
         if (a_zIndex == 255)
@@ -443,7 +444,6 @@ public class BaseElement extends GameElement
 
         // switch back to regular non-stencil rendering
         GLES20.glColorMask(true, true, true, true);
-
         return a_zIndex + 1;
     }
 

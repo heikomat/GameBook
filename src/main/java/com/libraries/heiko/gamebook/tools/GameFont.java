@@ -24,28 +24,29 @@ public class GameFont
     public final static int CHAR_UNKNOWN = (CHAR_CNT - 1);          // Index of the Unknown Character
 
     //--Members--//
-    AssetManager assets;                               // Asset Manager
-    int fontPadX, fontPadY, fontSize;                  // Font Padding (Pixels; On Each Side, ie. Doubled on Both X+Y Axis)
-    String fontFile;                                   // FontFile to load
+    AssetManager assets;                                            // Asset Manager
+    int fontPadX, fontPadY, fontSize;                               // Font Padding (Pixels; On Each Side, ie. Doubled on Both X+Y Axis)
+    String fontFile;                                                // FontFile to load
 
     float[] color = new float[4];
     public boolean fontLoaded = false;
 
-    int textureId = -1;                                     // Font Texture ID [NOTE: Public for Testing Purposes Only!]
-    float charWidthMax = 0;                                // Character Width (Maximum; Pixels)
-    float charHeight = 0;                                  // Character Height (Maximum; Pixels)
-    final float[] charWidths;                          // Width of Each Character (Actual; Pixels)
-    final Rect[] charBounds;                          // Width of Each Character (Actual; Pixels)
-    float[][] charRgn;                           // Region of Each Character (Texture Coordinates)
-    int cellWidth = 0, cellHeight = 0;                         // Character Cell Width/Height
-    int columnCount = 0;                                // Number of Rows/Columns
+    int textureId = -1;                                             // Font Texture ID [NOTE: Public for Testing Purposes Only!]
+    float charWidthMax = 0;                                         // Character Width (Maximum; Pixels)
+    float charHeight = 0;                                           // Character Height (Maximum; Pixels)
+    final float[] charWidths;                                       // Width of Each Character (Actual; Pixels)
+    final Rect[] charBounds;                                        // Width of Each Character (Actual; Pixels)
+    float[][] charRgn;                                              // Region of Each Character (Texture Coordinates)
+    int cellWidth = 0, cellHeight = 0;                              // Character Cell Width/Height
+    int columnCount = 0;                                            // Number of Rows/Columns
 
-    float scaleX = 1, scaleY = 1;                              // Font Scale (X,Y Axis)
-    float spaceX = 0;                                      // Additional (X,Y Axis) Spacing (Unscaled)
+    float scaleX = 1, scaleY = 1;                                   // Font Scale (X,Y Axis)
+    float displayScaleX = 1, displayScaleY = 1;                     // Font Scale used to render the text. Converts pixes-values to vertex-values
+    float spaceX = 0;                                               // Additional (X,Y Axis) Spacing (Unscaled)
 
-    private int programHandle; 						   // OpenGL Program object
-    private int mColorHandle;						   // Shader color handle
-    private int mTextureUniformHandle;                 // Shader texture handle
+    private int programHandle; 						                // OpenGL Program object
+    private int mColorHandle;						                // Shader color handle
+    private int mTextureUniformHandle;                              // Shader texture handle
 
     // cache-variables to prevent memory-allocations
     int tempWidth;
@@ -308,26 +309,17 @@ public class GameFont
             a_rotateAngleY  - float     | rotates the text around the y-axis by a_rotateAngleY degrees
             a_rotateAngleZ  - float     | rotates the text around the z-axis by a_rotateAngleZ degrees
     */
-    public void Draw(String a_text, float a_x, float a_y, float a_z, float a_rotateAngleX, float a_rotateAngleY, float a_rotateAngleZ)
+    public void Draw(String a_text, float a_x, float a_y, float a_z)
     {
-        float chrHeight = this.cellHeight * this.scaleY;          // Calculate Scaled Character Height
-        float chrWidth = this.cellWidth * this.scaleX;            // Calculate Scaled Character Width
+        float chrHeight = this.cellHeight * this.scaleY * this.displayScaleY;          // Calculate Scaled Character Height
+        float chrWidth = this.cellWidth * this.scaleX * this.displayScaleX;            // Calculate Scaled Character Width
         int len = a_text.length();                        // Get String Length
-        a_x += ( chrWidth / 2.0f ) - ( this.fontPadX * this.scaleX );  // Adjust Start X
-        a_y += ( chrHeight / 2.0f ) - ( this.fontPadY * this.scaleY );  // Adjust Start Y
+        a_x += ( chrWidth / 2.0f ) - ( this.fontPadX * this.scaleX * this.displayScaleX);  // Adjust Start X
+        a_y += ( chrHeight / 2.0f ) - ( this.fontPadY * this.scaleY * this.displayScaleY);  // Adjust Start Y
 
         // create a model matrix based on x, y and angleDeg
         Matrix.setIdentityM(this.modelMatrix, 0);
         Matrix.translateM(this.modelMatrix, 0, a_x, a_y, a_z);
-
-        if (a_rotateAngleX != 0)
-            Matrix.rotateM(this.modelMatrix, 0, a_rotateAngleX, 0, 0, 1);
-
-        if (a_rotateAngleY != 0)
-            Matrix.rotateM(this.modelMatrix, 0, a_rotateAngleY, 1, 0, 0);
-
-        if (a_rotateAngleZ != 0)
-            Matrix.rotateM(this.modelMatrix, 0, a_rotateAngleZ, 0, 1, 0);
 
         float letterX = 0;
 
@@ -371,7 +363,7 @@ public class GameFont
             bufferIndex++;
             numSprites++;
 
-            letterX += (this.charWidths[c] + this.spaceX ) * this.scaleX;    // Advance X Position by Scaled Character Width
+            letterX += (this.charWidths[c] + this.spaceX ) * this.scaleX * this.displayScaleX;    // Advance X Position by Scaled Character Width
         }
     }
 
@@ -384,32 +376,19 @@ public class GameFont
             a_x             - float     | x-position of the bottom-left cordner of the text
             a_y             - float     | y-position of the bottom-left cordner of the text
             a_z             - float     | z-position of the bottom-left cordner of the text
-            a_rotateAngleX  - float     | rotates the text around the x-axis by a_rotateAngleX degrees
-            a_rotateAngleY  - float     | rotates the text around the y-axis by a_rotateAngleY degrees
-            a_rotateAngleZ  - float     | rotates the text around the z-axis by a_rotateAngleZ degrees
     */
-    public void Draw(char[] a_text, float a_x, float a_y, float a_z, float a_rotateAngleX, float a_rotateAngleY, float a_rotateAngleZ)
+    public void Draw(char[] a_text, float a_x, float a_y, float a_z)
     {
-        float chrHeight = this.cellHeight * this.scaleY;          // Calculate Scaled Character Height
-        float chrWidth = this.cellWidth * this.scaleX;            // Calculate Scaled Character Width
-        a_x += ( chrWidth / 2.0f ) - ( this.fontPadX * this.scaleX );  // Adjust Start X
-        a_y += ( chrHeight / 2.0f ) - ( this.fontPadY * this.scaleY );  // Adjust Start Y
+        float chrHeight = this.cellHeight * this.scaleY * this.displayScaleY;          // Calculate Scaled Character Height
+        float chrWidth = this.cellWidth * this.scaleX * this.displayScaleX;            // Calculate Scaled Character Width
+        a_x += ( chrWidth / 2.0f ) - ( this.fontPadX * this.scaleX * this.displayScaleX);  // Adjust Start X
+        a_y += ( chrHeight / 2.0f ) - ( this.fontPadY * this.scaleY * this.displayScaleY);  // Adjust Start Y
 
         // create a model matrix based on x, y and angleDeg
         Matrix.setIdentityM(this.modelMatrix, 0);
         Matrix.translateM(this.modelMatrix, 0, a_x, a_y, a_z);
 
-        if (a_rotateAngleX != 0)
-            Matrix.rotateM(this.modelMatrix, 0, a_rotateAngleX, 0, 0, 1);
-
-        if (a_rotateAngleY != 0)
-            Matrix.rotateM(this.modelMatrix, 0, a_rotateAngleY, 1, 0, 0);
-
-        if (a_rotateAngleZ != 0)
-            Matrix.rotateM(this.modelMatrix, 0, a_rotateAngleZ, 0, 1, 0);
-
         float letterX = 0;
-
         chrWidth /= 2;
         chrHeight /= 2;
         for (int i = 0; i < a_text.length; i++)
@@ -450,7 +429,7 @@ public class GameFont
             bufferIndex++;
             numSprites++;
 
-            letterX += (this.charWidths[c] + this.spaceX ) * this.scaleX;    // Advance X Position by Scaled Character Width
+            letterX += (this.charWidths[c] + this.spaceX ) * this.scaleX * this.displayScaleX;    // Advance X Position by Scaled Character Width
         }
     }
 
@@ -540,7 +519,7 @@ public class GameFont
             a_text  - String    | The text to render
 
         Returns:
-            Integer -> - The witdth of the text, if it were to be drawn with this font
+            int -> - The witdth of the text, if it were to be drawn with this font
     */
     public int TextWidth(String a_text)
     {
@@ -566,7 +545,7 @@ public class GameFont
             a_text  - char[]    | The text to render
 
         Returns:
-            Integer -> - The witdth of the text, if it were to be drawn with this font
+            int -> - The witdth of the text, if it were to be drawn with this font
     */
     public int TextWidth(char[] a_text)
     {
@@ -580,6 +559,34 @@ public class GameFont
             this.tempWidth += (this.charWidths[c] + this.spaceX ) * this.scaleX;    // Advance X Position by Scaled Character Width
         }
         return tempWidth;
+    }
+
+    /*
+        Function: TextWidth
+            Sets text-scaling
+
+        Parameter:
+            a_scaleX  - float   | horizontal scaling-factor
+            a_scaleY  - float   | vertical scaling-factor
+    */
+    public void SetScale(float a_scaleX, float a_scaleY)
+    {
+        this.scaleX = a_scaleX;
+        this.scaleY = a_scaleY;
+    }
+
+    /*
+        Function: SetDisplayScale
+            Sets display-scaling to convert pixel-values to vertex-values
+
+        Parameter:
+            a_scaleX  - float   | horizontal scaling-factor
+            a_scaleY  - float   | vertical scaling-factor
+    */
+    public void SetDisplayScale(float a_scaleX, float a_scaleY)
+    {
+        this.displayScaleX = a_scaleX;
+        this.displayScaleY = a_scaleY;
     }
 
     public int TextHeight()

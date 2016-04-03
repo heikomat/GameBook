@@ -10,7 +10,7 @@ import com.libraries.heiko.gamebook.tools.GameFont;
 /**
  * Created by heiko on 19.02.2016.
  */
-public class Label extends BaseElement
+public class Label extends BaseSquare
 {
     private GameFont font;                  // current font
     private int fontColor = Color.WHITE;    // current font-color
@@ -82,8 +82,8 @@ public class Label extends BaseElement
             this.DrawBasics(a_mvpMatrix);
 
         // TODO: Set correct fontColor (this.fontColor)
-        this.font.Begin( 1.0f, 1.0f, 1.0f, 1.0f, a_mvpMatrix );
-        this.font.Draw(this.text, this.x, this.y, 0, 0, 0, 0);
+        this.font.Begin(1.0f, 1.0f, 1.0f, 1.0f, a_mvpMatrix);
+        this.font.Draw(this.text, this.vectorX, this.vectorY, -(this.zIndex + 1));
         this.font.End();
     }
 }

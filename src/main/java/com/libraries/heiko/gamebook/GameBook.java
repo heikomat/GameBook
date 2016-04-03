@@ -22,6 +22,8 @@ public class GameBook extends GLSurfaceView
 
     public int screenWidth = 0;                                 // The actual width of the screen
     public int screenHeight = 0;                                // The actual height of the screen
+    public int gameWidth = 0;                                   // The gameWidth. Gets scaled up/down to the screen
+    public int gameHeight = 0;                                  // The gameHeight. Gets scaled up/down to the screen
 
     // cache-variables to prevent memory-allocations
     private GameStack<GamePage> drawPages;                      // used by the drawThread to iterate through the GamePages
@@ -33,8 +35,22 @@ public class GameBook extends GLSurfaceView
      public GameBook(Context a_context)
     {
         super(a_context);
+        this._Init(a_context, a_context.getResources().getDisplayMetrics().widthPixels, a_context.getResources().getDisplayMetrics().heightPixels);
+    }
+
+    public GameBook(Context a_context, int a_gameWidth, int a_gameHeight)
+    {
+        super(a_context);
+        this._Init(a_context, a_gameWidth, a_gameHeight);
+    }
+
+    private void _Init(Context a_context, int a_gameWidth, int a_gameHeight)
+    {
         this.screenWidth = a_context.getResources().getDisplayMetrics().widthPixels;
         this.screenHeight = a_context.getResources().getDisplayMetrics().heightPixels;
+        this.gameWidth = a_gameWidth;
+        this.gameHeight = a_gameHeight;
+
         pages = new GameStack<GamePage>();
         // TODO: Handle Instance changes (like orientation change).
         // TODO: At the moment, an orientationchange rebuilds the whole view and eats memory
@@ -52,7 +68,7 @@ public class GameBook extends GLSurfaceView
         setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
 
         // Initiate the GameThread and start it
-        this.gameThread = new GameThread(this, 100);
+        this.gameThread = new GameThread(this, 70);
         this.gameThread.setRunning(true);
     }
 
@@ -202,6 +218,18 @@ public class GameBook extends GLSurfaceView
         while (this.drawPages.content != null)
         {
             this.drawPages.content._OGLReady();
+            this.drawPages = this.drawPages.next;
+        }
+    }
+
+    // gets called when the screen changes (e.g. on orientiation change, and on startup)
+    public void _UpdateScreenDimensions(float a_horzVertexRatio, float a_vertVertexRatio)
+    {
+        this.resources._UpdateScreenDimensions(a_horzVertexRatio, a_vertVertexRatio);
+        this.drawPages = pages;
+        while (this.drawPages.content != null)
+        {
+            this.drawPages.content._UpdateScreenDimensions(a_horzVertexRatio, a_vertVertexRatio);
             this.drawPages = this.drawPages.next;
         }
     }
