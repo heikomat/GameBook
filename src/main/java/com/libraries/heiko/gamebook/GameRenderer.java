@@ -73,7 +73,6 @@ public class GameRenderer implements GLSurfaceView.Renderer
         if (!this.oglReady)
             return;
 
-        // TODO: Find Frustum-settings that work
         // define projection-matrix and set the camera-position (View matrix)
         float ratio = (float) this.gamebook.gameWidth / this.gamebook.gameHeight;
         this.left = -ratio;
@@ -86,25 +85,18 @@ public class GameRenderer implements GLSurfaceView.Renderer
         this.vertVertexRatio = this.height/this.displayHeight;
 
         if (this.renderMode == RenderMode.TWOD)
-        {
-            // Matrix.orthoM(projectionMatrix, 0,   0, ratio,   0, 1,   -1, 10);
             Matrix.orthoM(projectionMatrix, 0,   this.left, this.right,   this.bottom, this.top,   -1, 10);
-        }
         else if (this.renderMode == RenderMode.THREED)
-        {
             Matrix.frustumM(projectionMatrix, 0,  this.left, this.right,   this.bottom, this.top, 1, 100);
-            //Matrix.frustumM(projectionMatrix, 0,  -ratio/2, ratio/2, -0.5f, 0.5f, 1, 100);
-            //Matrix.frustumM(projectionMatrix, 0,  0, ratio, 0, 1, 1, 100);
-
-        }
         else
             throw new Error("unknown render-mode " + a_renderMode);
 
         Matrix.setLookAtM(viewMatrix, 0,   0, 0, 1,   0, 0, 0,   0, 1, 0);
         Matrix.multiplyMM(mvpMatrix, 0, projectionMatrix, 0, viewMatrix, 0);
 
-        //scale, so the ingame-coordinates fall in the area from 0 to 1
-        //Matrix.scaleM(mvpMatrix, 0, 1f/this.gamebook.gameHeight, 1f/this.gamebook.gameHeight, 1);
+        // In 3D-Mode, Elements are drawn on a z-level that is one away from the camera
+        // To make Elements with the lowest z-level the correct size on the screen,
+        // everything needs to be scaled up by 2
         if (this.renderMode == RenderMode.THREED)
             Matrix.scaleM(mvpMatrix, 0, 2, 2, 1);
 
