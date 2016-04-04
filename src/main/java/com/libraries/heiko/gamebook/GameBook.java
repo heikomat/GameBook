@@ -28,6 +28,7 @@ public class GameBook extends GLSurfaceView
     // cache-variables to prevent memory-allocations
     private GameStack<GamePage> drawPages;                      // used by the drawThread to iterate through the GamePages
     private GameStack<GamePage> temp;                           // used by the everything but the drawThread to iterate through the GamePages
+    private GameStack<GamePage> temp2;                           // used by the everything but the drawThread to iterate through the GamePages
 
     // Framework-interal settings
     public Bitmap.Config bitmapConfig = Bitmap.Config.RGB_565;  // The bitmap config to use throughout the game
@@ -118,7 +119,6 @@ public class GameBook extends GLSurfaceView
     */
     public GamePage AddPage(String a_id, boolean a_visible)
     {
-		// TODO: don't add the Page on top of the stack, but in a position based on its z-index
         if (this.GetPage(a_id) != null)
             throw new Error("Page " + a_id + " already exists");
 
@@ -184,6 +184,39 @@ public class GameBook extends GLSurfaceView
             this.temp = this.temp.next;
         }
         return null;
+    }
+
+    public void SetPageDrawOrder(String a_id, int a_drawOrder)
+    {
+        this.temp = this.pages;
+        while (this.temp.content != null)
+        {
+            if (this.temp.content.id.equals(a_id))
+                break;
+
+            this.temp = this.temp.next;
+        }
+
+        // if the element with the given ID was not found, abort
+        if (this.temp.content == null)
+            return;
+
+        this.temp2 = this.temp;
+        if (this.temp.content.drawOrder > a_drawOrder)
+            this.temp = this.pages;
+
+        // find the first entry that has a higher zIndex than the element should get
+        while (this.temp.content != null)
+        {
+            if (this.temp.content.drawOrder > a_drawOrder)
+                break;
+
+            this.temp = this.temp.next;
+        }
+
+        // remove the Element from its old position and push it to the new one
+        this.temp.push(this.temp2.pop());
+        this.temp.content.drawOrder = a_drawOrder;
     }
 
     // updates the Game-mechanics. Is called by the gameThread
@@ -259,6 +292,7 @@ public class GameBook extends GLSurfaceView
                 startTime = System.nanoTime();
                 this.gamebook._Update(this.lastFrameDuration, this.lastFrameDuration / this.frameTime);
                 this.lastRenderBudget = this.frameTime - (System.nanoTime() - startTime);
+
                 synchronized (this)
                 {
                     try

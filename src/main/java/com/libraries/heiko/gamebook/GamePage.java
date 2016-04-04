@@ -17,11 +17,13 @@ public class GamePage
     GameStack<GameElement> elements;                // beinhaltet nur die "Parentlosten" elemente. Verweise zu den anderen Elementen der Page laufen über diese
     boolean visible = false;                        // true: the GamePage and its elements will be visible, false: The GamePage will be invisible
     int zIndex = 0;                                 // z-index of the Page. Pages with a lower z-index will be drawn first (below other pages)
+    int drawOrder = 0;                                 // z-index of the Page. Pages with a lower z-index will be drawn first (below other pages)
 
     // cache-variables to prevent memory-allocations
     GameElement currentElment;                      // used to add new elements
     GameElement tempElement;                        // used to update the elements
     GameStack<GameElement> temp;                    // used by everything but the _Draw function to iterate through the elements
+    GameStack<GameElement> temp2;                    // used by everything but the _Draw function to iterate through the elements
     public GameStack<GameElement> renderElements;   // used by the _Draw function to iterate through the elements
 
     public GameStack<GameElement> getElements()
@@ -184,6 +186,48 @@ public class GamePage
         a_element.pop();
     }
 
+
+    public void SetDrawOrder(int a_drawOrder)
+    {
+        if (this.zIndex == a_drawOrder)
+            return;
+
+        this.book.SetPageDrawOrder(this.id, a_drawOrder);
+    }
+
+    public void SetChildDrawOrder(String a_id, int a_drawOrder)
+    {
+        this.temp = this.elements;
+        while (this.temp.content != null)
+        {
+            if (this.temp.content.id.equals(a_id))
+                break;
+
+            this.temp = this.temp.next;
+        }
+
+        // if the element with the given ID was not found, abort
+        if (this.temp.content == null)
+            return;
+
+        this.temp2 = this.temp;
+        if (this.temp.content.drawOrder > a_drawOrder)
+            this.temp = this.elements;
+
+        // find the first entry that has a higher zIndex than the element should get
+        while (this.temp.content != null)
+        {
+            if (this.temp.content.drawOrder > a_drawOrder)
+                break;
+
+            this.temp = this.temp.next;
+        }
+
+        // remove the Element from its old position and push it to the new one
+        this.temp.push(this.temp2.pop());
+        this.temp.content.drawOrder = a_drawOrder;
+    }
+
     /*
         Function: AddLabel
             Adds a new label to the GamePage
@@ -254,7 +298,6 @@ public class GamePage
     // Adds a GameElement to the GamePage
     private GameElement _AddElement(GameElement a_element, GameElement a_parent, int a_x, int a_y, int a_width, int a_height)
     {
-        // TODO: don't add the Element on top of the stack, but in a position based on its z-index
         a_element.SetPosition(a_x, a_y);
         a_element.SetSize(a_width, a_height);
 

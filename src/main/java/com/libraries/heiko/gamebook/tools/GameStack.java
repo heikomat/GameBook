@@ -26,6 +26,24 @@ public class GameStack <T>
     }
 
     /*
+        Function: push
+            Pushes a new Item to the top of the stack
+
+        Parameter:
+            a_content   - T         | The content to store
+            a_index     - Integer   | Index of the item to pop at
+    */
+    public void push(T a_content, int a_index)
+    {
+        this.temp = this;
+        for (int i = 0; i < a_index; i++)
+        {
+            this.temp = this.temp.next;
+        }
+        this.temp.push(a_content);
+    }
+
+    /*
         Function: pop
             Removes the item at the top of the stack
 
@@ -47,6 +65,36 @@ public class GameStack <T>
     }
 
     /*
+        Function: pop
+            Removes the item at the top of the stack
+
+        Parameter:
+            a_index - Integer   | Index of the item to pop at
+
+        Returns:
+            T -> - The item that was just removed from the stack
+    */
+    public T pop(int a_index)
+    {
+        this.temp = this;
+        for (int i = 0; i < a_index; i++)
+        {
+            this.temp = this.temp.next;
+        }
+
+        T cache = this.temp.content;
+        if (this.temp.next == null)
+            this.temp.content = null;
+        else
+        {
+            this.temp.content = this.temp.next.content;
+            this.temp.next = this.temp.next.next;
+        }
+
+        return cache;
+    }
+
+    /*
         Function: peek
             Gets the item at the top of the stack
 
@@ -56,5 +104,25 @@ public class GameStack <T>
     public T peek()
     {
         return this.content;
+    }
+
+    /*
+        Function: peek
+            Gets the item at the top of the stack
+
+        Parameter:
+            a_index - Integer   | Index of the item to peek at
+
+        Returns:
+            T -> - The item currently at the top of the stack
+    */
+    public T peek(int a_index)
+    {
+        this.temp = this;
+        for (int i = 0; i < a_index; i++)
+        {
+            this.temp = this.temp.next;
+        }
+        return this.temp.content;
     }
 }

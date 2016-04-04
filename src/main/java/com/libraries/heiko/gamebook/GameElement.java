@@ -29,6 +29,7 @@ public class GameElement
     public boolean visible = true;                  // true: The GameElement is visible, false: The GameElement is not visible
     public boolean hideOverflow = false;            // true: childelements visually can't be oudside this element, false: they can
     public float zIndex = 0;                          // z-index of the Element. Elements with a lower z-index will be drawn first (below other pages)
+    public float drawOrder = 0;                          // z-index of the Element. Elements with a lower z-index will be drawn first (below other pages)
 
     // cache-variables to prevent memory-allocations
     public GameStack<GAnimation> animations;        // Stack of the currently active animations
@@ -39,6 +40,7 @@ public class GameElement
     private GameStack<GameElement> drawElements;    // used by the Draw function to iterate through the child-elements
     private GameStack<GAnimation> tempAnimations;   // used by everything but the Draw function to iterate through the child-elements
     private GameStack<GameElement> tempElements;    // used by everything but the Draw function to iterate through the child-elements
+    private GameStack<GameElement> tempElements2;    // used by everything but the Draw function to iterate through the child-elements
     private GameElement tempElement;                // used to cache a GameElement
 
     // OpenGL-Stuff
@@ -163,6 +165,50 @@ public class GameElement
         this.y = a_y;
 		this.vectorX = this.book.gameRenderer.left + ((float) this.x / this.book.gameWidth) * this.book.gameRenderer.width;
 		this.vectorY = this.book.gameRenderer.bottom + ((float) this.y / this.book.gameHeight) * this.book.gameRenderer.height;
+    }
+
+    public void SetDrawOrder(int a_drawOrder)
+    {
+        if (this.drawOrder == a_drawOrder)
+            return;
+
+        if (this.parent != null)
+            this.parent.SetChildDrawOrder(this.id, a_drawOrder);
+        else
+            this.page.SetChildDrawOrder(this.id, a_drawOrder);
+    }
+
+    public void SetChildDrawOrder(String a_id, int a_drawOrder)
+    {
+        this.tempElements = this.children;
+        while (this.tempElements.content != null)
+        {
+            if (this.tempElements.content.id.equals(a_id))
+                break;
+
+            this.tempElements = this.tempElements.next;
+        }
+
+        // if the element with the given ID was not found, abort
+        if (this.tempElements.content == null)
+            return;
+
+        this.tempElements2 = this.tempElements;
+        if (this.tempElements.content.drawOrder > a_drawOrder)
+            this.tempElements = this.children;
+
+        // find the first entry that has a higher zIndex than the element should get
+        while (this.tempElements.content != null)
+        {
+            if (this.tempElements.content.drawOrder > a_drawOrder)
+                break;
+
+            this.tempElements = this.tempElements.next;
+        }
+
+        // remove the Element from its old position and push it to the new one
+        this.tempElements.push(this.tempElements2.pop());
+        this.tempElements.content.drawOrder = a_drawOrder;
     }
 
     // calculates frame-updates that are valid for all element-types and updates the child-elemente
