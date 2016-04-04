@@ -3,7 +3,7 @@ My attempt on an Android-Framework for 2D games
 
 It's currently **under heavy development**, but i'll make a proper readme as soon as it's good eneough to actually do something with it,
 but **the general gist is**:
-  - It's in OpenGL ES 2, and supports 2D (orthographic) and 3D (perspective)
+  - It's in OpenGL ES 2, and supports 2D (orthographic) and 3D (perspective) rendering
   - You can switch between 2D (e.g top-down adventure) and 3D (e.g. 2.5D sidescroller) without changing your code
   - You have the GameBook (main) class
   - The GameBook has Pages
