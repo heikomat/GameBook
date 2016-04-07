@@ -12,19 +12,18 @@ import com.libraries.heiko.gamebook.tools.GameStack;
  */
 public class GamePage
 {
-    String id;                                      // The ID of the GamePage
-    GameBook book;                                  // Reference to the GameBook that created this GamePage
-    GameStack<GameElement> elements;                // beinhaltet nur die "Parentlosten" elemente. Verweise zu den anderen Elementen der Page laufen über diese
-    boolean visible = false;                        // true: the GamePage and its elements will be visible, false: The GamePage will be invisible
-    int zIndex = 0;                                 // z-index of the Page. Pages with a lower z-index will be drawn first (below other pages)
-    int drawOrder = 0;                                 // z-index of the Page. Pages with a lower z-index will be drawn first (below other pages)
+    public String id;                                   // The ID of the GamePage
+    private GameBook book;                              // Reference to the GameBook that created this GamePage
+    private GameStack<GameElement> elements;            // beinhaltet nur die "Parentlosten" elemente. Verweise zu den anderen Elementen der Page laufen über diese
+    boolean visible = false;                            // true: the GamePage and its elements will be visible, false: The GamePage will be invisible
+    int drawOrder = 0;                                  // z-index of the Page. Pages with a lower z-index will be drawn first (below other pages)
 
     // cache-variables to prevent memory-allocations
-    GameElement currentElment;                      // used to add new elements
-    GameElement tempElement;                        // used to update the elements
-    GameStack<GameElement> temp;                    // used by everything but the _Draw function to iterate through the elements
-    GameStack<GameElement> temp2;                    // used by everything but the _Draw function to iterate through the elements
-    public GameStack<GameElement> renderElements;   // used by the _Draw function to iterate through the elements
+    private GameElement currentElment;                  // used to add new elements
+    private GameElement tempElement;                    // used to update the elements
+    private GameStack<GameElement> temp;                // used by everything but the _Draw function to iterate through the elements
+    private GameStack<GameElement> temp2;               // used by everything but the _Draw function to iterate through the elements
+    public GameStack<GameElement> renderElements;       // used by the _Draw function to iterate through the elements
 
     public GameStack<GameElement> getElements()
     {
@@ -33,16 +32,16 @@ public class GamePage
 
     public GamePage(String a_id, GameBook a_gamebook)
     {
-        this._Init(a_id, a_gamebook, false);
+        this.Init(a_id, a_gamebook, false);
     }
 
     public GamePage(String a_id, GameBook a_gamebook, boolean a_visible)
     {
-        this._Init(a_id, a_gamebook, a_visible);
+        this.Init(a_id, a_gamebook, a_visible);
     }
 
     // Initializes the default values of the GamePage
-    public void _Init(String a_id, GameBook a_gamebook, boolean a_visible)
+    private void Init(String a_id, GameBook a_gamebook, boolean a_visible)
     {
         this.id = a_id;
         this.visible = a_visible;
@@ -51,7 +50,7 @@ public class GamePage
     }
 
     // updates the game-mechanics of the elements of this GamePage
-    public void _Update(long a_timeDelta, double a_timeFactor)
+    void Update(long a_timeDelta, double a_timeFactor)
     {
         if (this.elements == null)
             return;
@@ -65,7 +64,7 @@ public class GamePage
     }
 
     // draws the elements of this GamePage to the current framebuffer
-    public void _Draw(float[] a_mvpMatrix)
+    void Draw(float[] a_mvpMatrix)
     {
         if (this.elements == null)
             return;
@@ -81,7 +80,7 @@ public class GamePage
     }
 
     // gets called once OpenGL is ready to be used
-    public void _OGLReady()
+    void OGLReady()
     {
         if (this.elements == null)
             return;
@@ -95,7 +94,7 @@ public class GamePage
     }
 
     // gets called when the screen changes (e.g. on orientiation change, and on startup)
-    public void _UpdateScreenDimensions(float a_horzVertexRatio, float a_vertVertexRatio)
+    void UpdateScreenDimensions(float a_horzVertexRatio, float a_vertVertexRatio)
     {
         if (this.elements == null)
             return;
@@ -145,7 +144,7 @@ public class GamePage
         this.temp = this.elements;
         while (this.temp != null && this.temp.content != null)
         {
-            this._RemoveElement(this.temp);
+            this.RemoveElement(this.temp);
         }
     }
 
@@ -171,7 +170,7 @@ public class GamePage
             {
                 if (this.temp.content.id.equals(a_id))
                 {
-                    this._RemoveElement(this.temp);
+                    this.RemoveElement(this.temp);
                     return;
                 }
 
@@ -180,21 +179,34 @@ public class GamePage
         }
     }
 
-    private void _RemoveElement(GameStack<GameElement> a_element)
+    private void RemoveElement(GameStack<GameElement> a_element)
     {
         a_element.content.RemoveAllChildren();
         a_element.pop();
     }
 
+    /*
+        Function: SetChildDrawOrder
+            Sets the drawOrder-Index of this page. Higher draworder = later rendering = above other elements
 
+        Parameter:
+            a_drawOrder - Integer   | The drawOrder-index the page should get
+    */
     public void SetDrawOrder(int a_drawOrder)
     {
-        if (this.zIndex == a_drawOrder)
+        if (this.drawOrder == a_drawOrder)
             return;
 
         this.book.SetPageDrawOrder(this.id, a_drawOrder);
     }
 
+    /*
+        Function: SetChildDrawOrder
+            Sets the drawOrder-Index of a child-element of this page. Higher draworder = later rendering = above other elements
+
+        Parameter:
+            a_drawOrder - Integer   | The drawOrder-index the page should get
+    */
     public void SetChildDrawOrder(String a_id, int a_drawOrder)
     {
         this.temp = this.elements;
@@ -244,10 +256,10 @@ public class GamePage
     */
     public GameElement AddLabel(String a_id, String a_parentID, int a_x, int a_y, GameFont a_font, String a_text)
     {
-        this._CheckElementAlreadyExists(a_id);
-        this.tempElement = this._GetParentElement(a_parentID);
+        this.CheckElementAlreadyExists(a_id);
+        this.tempElement = this.GetParentElement(a_parentID);
         this.currentElment = new Label(a_id, this, this.book, this.tempElement, a_font, a_text);
-        return this._AddElement(this.currentElment, this.tempElement, a_x, a_y);
+        return this.AddElement(this.currentElment, this.tempElement, a_x, a_y);
     }
 
     /*
@@ -267,21 +279,21 @@ public class GamePage
     */
     public GameElement AddSheet(String a_id, String a_parentID, int a_x, int a_y, int a_width, int a_height)
     {
-        this._CheckElementAlreadyExists(a_id);
-        this.tempElement = this._GetParentElement(a_parentID);
+        this.CheckElementAlreadyExists(a_id);
+        this.tempElement = this.GetParentElement(a_parentID);
         this.currentElment = new Sheet(a_id, this, this.book, this.tempElement);
-        return this._AddElement(this.currentElment, this.tempElement, a_x, a_y, a_width, a_height);
+        return this.AddElement(this.currentElment, this.tempElement, a_x, a_y, a_width, a_height);
     }
 
     // Checks if an element with a given ID already exists
-    private void _CheckElementAlreadyExists(String a_id)
+    private void CheckElementAlreadyExists(String a_id)
     {
         if (this.GetElement(a_id) != null)
             throw new Error("Element '" + a_id + "' already exists on page '" + this.id + "'");
     }
 
     // Gets the parent-element with a given ID
-    private GameElement _GetParentElement(String a_parentID)
+    private GameElement GetParentElement(String a_parentID)
     {
         if (a_parentID != null)
         {
@@ -296,7 +308,7 @@ public class GamePage
     }
 
     // Adds a GameElement to the GamePage
-    private GameElement _AddElement(GameElement a_element, GameElement a_parent, int a_x, int a_y, int a_width, int a_height)
+    private GameElement AddElement(GameElement a_element, GameElement a_parent, int a_x, int a_y, int a_width, int a_height)
     {
         a_element.SetPosition(a_x, a_y);
         a_element.SetSize(a_width, a_height);
@@ -310,8 +322,8 @@ public class GamePage
     }
 
     // Adds a GameElement to the GamePage
-    private GameElement _AddElement(GameElement a_element, GameElement a_parent, int a_x, int a_y)
+    private GameElement AddElement(GameElement a_element, GameElement a_parent, int a_x, int a_y)
     {
-        return this._AddElement(a_element, a_parent, a_x, a_y, 0, 0);
+        return this.AddElement(a_element, a_parent, a_x, a_y, 0, 0);
     }
 }

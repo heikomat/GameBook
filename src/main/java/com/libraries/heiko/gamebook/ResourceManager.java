@@ -1,10 +1,9 @@
-package com.libraries.heiko.gamebook.tools;
+package com.libraries.heiko.gamebook;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 
-import com.libraries.heiko.gamebook.GameBook;
-
+import com.libraries.heiko.gamebook.tools.*;
 
 /**
  * Created by heiko on 28.02.2016.
@@ -234,6 +233,22 @@ public class ResourceManager
             }
 
             this.tempStack = this.tempStack.next;
+        }
+    }
+
+    class GameResource
+    {
+        String id;
+        Object resource;
+        public GameResource(String a_id)
+        {
+            this.id = a_id;
+        }
+
+        public GameResource(String a_id, Object a_resource)
+        {
+            this.id = a_id;
+            this.resource = a_resource;
         }
     }
 }

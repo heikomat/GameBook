@@ -22,14 +22,14 @@ public class GameRenderer implements GLSurfaceView.Renderer
     public boolean oglReady = false;                           	// flag that indicates wether OpenGL is ready to be used
 
     // screen-position and size
-    public float left = 0;
-    public float right = 0;
-    public float bottom = 0;
-    public float top = 0;
-    public float width = 0;
-    public float height = 0;
-    public float horzVertexRatio = 0;
-    public float vertVertexRatio = 0;
+    float left = 0;
+    float right = 0;
+    float bottom = 0;
+    float top = 0;
+    float width = 0;
+    float height = 0;
+    float horzVertexRatio = 0;
+    float vertVertexRatio = 0;
 
     // GameBook stuff
     private GameBook gamebook;                                  // Reference to the GameBook-Instance to call the _Draw function
@@ -56,7 +56,7 @@ public class GameRenderer implements GLSurfaceView.Renderer
     public void onSurfaceChanged(GL10 a_gl, int a_width, int a_height)
     {
         this.oglReady = true;
-        this.gamebook._OGLReady();
+        this.gamebook.OGLReady();
 
         this.displayWidth = a_width;
         this.displayHeight = a_height;
@@ -100,7 +100,7 @@ public class GameRenderer implements GLSurfaceView.Renderer
         if (this.renderMode == RenderMode.THREED)
             Matrix.scaleM(mvpMatrix, 0, 2, 2, 1);
 
-        this.gamebook._UpdateScreenDimensions(this.horzVertexRatio, this.vertVertexRatio);
+        this.gamebook.UpdateScreenDimensions(this.horzVertexRatio, this.vertVertexRatio);
     }
 
     // gets called every time a Frame can be drawn. Draws the current scene
@@ -108,7 +108,7 @@ public class GameRenderer implements GLSurfaceView.Renderer
     {
         // Clear the BackGround and draws the enviroment
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
-        this.gamebook._Draw(this.mvpMatrix);
+        this.gamebook.Draw(this.mvpMatrix);
 
         // calculate draw-fps
         this.gamebook.lastDrawFPS = 1000000000/(System.nanoTime() - this.lastFrameTime);

@@ -34,12 +34,12 @@ public class BaseSquare extends GameElement
     private int colorShaderProgram;						// the ShaderProgram to use when only a backgroundColor is set
     private int imageShaderProgram;						// the ShaderProgram to use when only a backgroundImage is set
     private int colorAndImageShaderProgram;				// the ShaderProgram to use when both backgroundColor and backgroundImage are set
-    public int stencilProgram;                          // the ShaderProgram to use when applying the mask
-    public int shaderProgram;							// the currently used shaderProgram based on the set backgroundColor and backgroundImage
+    protected int stencilProgram;                          // the ShaderProgram to use when applying the mask
+    protected int shaderProgram;							// the currently used shaderProgram based on the set backgroundColor and backgroundImage
 														// needs to be public, so subclasses can decide not to call DrawBasics if not needed
 
 	// Variables necessary for positioning the vertices
-	private float coords[] =                                                                // The coordinates of the 6 vertices of the rect
+    protected float coords[] =                                                                // The coordinates of the 6 vertices of the rect
     {                                                                                       // The values represent the whole screen. they only
             0, 0, -(this.zIndex + 1),                                                       // get ues once in the constructor, and will be overwritten
             0, 1, -(this.zIndex + 1),                                                       // with the actual position directly afterwards
@@ -61,12 +61,12 @@ public class BaseSquare extends GameElement
 	// Variables necessary to draw the texture (aka backgroundImage, if there is one set)
 	private int[] textureIDs = new int[1];													// Array holding the pointer to the background-texture
 	private float[] texturePositions = {0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f};	// Positions of the texture
-	public FloatBuffer texturePositionBuffer;												// Buffer holding the texture-positions
+	private FloatBuffer texturePositionBuffer;												// Buffer holding the texture-positions
 	private int texturePositionHandle = 0;													// Handle to s_texture in the fragmentShaders
 	private Bitmap backgroundBitmap;														// The Bitmap to use as texture (aka backgroundImage)
 
 	// The texture-shader to use, when a background-texture is set
-    public final String textureVertexShaderCode  =
+    private final String textureVertexShaderCode  =
         "uniform mat4 uMVPMatrix;" +
         "attribute vec4 vPosition;" +
         "attribute vec2 a_texCoord;" +
@@ -78,7 +78,7 @@ public class BaseSquare extends GameElement
         "}";
 
 	// The texture-shader to use, when no background-texture is set
-    public final String colorVertexShaderCode =
+    private final String colorVertexShaderCode =
         "uniform mat4 uMVPMatrix;" +
         "attribute vec4 vPosition;" +
         "void main()" +
@@ -87,7 +87,7 @@ public class BaseSquare extends GameElement
         "}";
 
 	// The fragment-shader to use, when only a background-color, but no background-texture is set
-    public final String colorFragmentShaderCode =
+    private final String colorFragmentShaderCode =
         "precision mediump float;" +
         "uniform vec4 vColor;" +
         "void main()" +
@@ -96,7 +96,7 @@ public class BaseSquare extends GameElement
         "}";
 
 	// The fragment-shader to use, when only a background-texture, but no background-color is set
-    public final String imageFragmentShaderCode =
+    private final String imageFragmentShaderCode =
         "precision mediump float;" +
         "varying vec2 v_texCoord;" +
         "uniform sampler2D s_texture;" +
@@ -107,7 +107,7 @@ public class BaseSquare extends GameElement
         "}";
 
 	// The fragment-shader to use, when both background-color and background-texture are set
-    public final String colorAndImageFragmentShaderCode =
+    private final String colorAndImageFragmentShaderCode =
         "precision mediump float;" +
         "uniform vec4 vColor;" +
         "varying vec2 v_texCoord;" +
@@ -125,7 +125,7 @@ public class BaseSquare extends GameElement
         "}";
 
     // The fragment-shader to use when editing the current stencil
-    public final String stencilFragmentShaderCode =
+    private final String stencilFragmentShaderCode =
         "precision mediump float;" +
         "uniform vec4 vColor;" +
         "void main()" +
@@ -153,13 +153,14 @@ public class BaseSquare extends GameElement
         ByteBuffer dlb = ByteBuffer.allocateDirect(drawOrder.length * 2);
         this.drawListBuffer = dlb.order(ByteOrder.nativeOrder()).asShortBuffer();
         this.drawListBuffer.put(this.drawOrder).position(0);
-        this._posToVertices();
+        this.PosToVertices();
 
         if (this.book.gameRenderer.oglReady == true)
             this._OGLReady();
     }
 
-    public void _OGLReady()
+    @Override
+    protected void _OGLReady()
     {
         // Create an empty OpenGL ES Program, Load the Shaders and add them to the program and create (compile) it
         this.colorShaderProgram = GLES20.glCreateProgram();
@@ -185,22 +186,24 @@ public class BaseSquare extends GameElement
 
         // Create a texture and get its ID
         GLES20.glGenTextures(1, this.textureIDs, 0);
-        this._UpdateShaderProgram();
+        this.UpdateShaderProgram();
     }
 
+    @Override
     public void SetSize(int a_width, int a_height)
     {
         super.SetSize(a_width, a_height);
-        this._posToVertices();
+        this.PosToVertices();
     }
 
+    @Override
     public void SetPosition(int a_x, int a_y)
     {
         super.SetPosition(a_x, a_y);
-        this._posToVertices();
+        this.PosToVertices();
     }
 
-    private void _posToVertices()
+    private void PosToVertices()
     {
         // top left
         this.coords[0] = this.vectorX;
@@ -255,7 +258,7 @@ public class BaseSquare extends GameElement
         if (a_borderColor != null)
             this.borderColor = Color.parseColor(a_borderColor);
 
-        this._UpdateShaderProgram();
+        this.UpdateShaderProgram();
     }
 
     /*
@@ -270,7 +273,7 @@ public class BaseSquare extends GameElement
     public void SetBackground(Bitmap a_bitmap, float a_width, float a_height)
     {
         this.backgroundBitmap = a_bitmap;
-        this._UpdateShaderProgram();
+        this.UpdateShaderProgram();
 
         this.SetBackgroundSize(a_width, a_height);
     }
@@ -313,7 +316,7 @@ public class BaseSquare extends GameElement
     }
 
     // Sets the shader-program to use, depending on the backgroundImage and backgroundColor currently set
-    private void _UpdateShaderProgram()
+    private void UpdateShaderProgram()
     {
         if (this.book.gameRenderer.oglReady == false)
         {
@@ -365,7 +368,7 @@ public class BaseSquare extends GameElement
         Parameter:
             a_shaderProgram  - int    | The ShaderProgram to use
     */
-    public void DrawBasics(float[] a_mvpMatrix)
+    protected void DrawBasics(float[] a_mvpMatrix)
     {
         if (this.shaderProgram == 0)
             return;
@@ -403,8 +406,9 @@ public class BaseSquare extends GameElement
 			GLES20.glDisableVertexAttribArray(this.texturePositionHandle);
     }
 
+    @Override
     // apply the mask of this element, so sub elements won't overflow
-    public int _ApplyMask(float[] a_mvpMatrix, int a_zIndex)
+    protected int _ApplyMask(float[] a_mvpMatrix, int a_zIndex)
     {
         if (this.stencilProgram == 0)
             return a_zIndex;

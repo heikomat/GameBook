@@ -5,47 +5,46 @@ import android.graphics.Bitmap;
 import android.opengl.GLSurfaceView;
 
 import com.libraries.heiko.gamebook.tools.GameStack;
-import com.libraries.heiko.gamebook.tools.ResourceManager;
 
 /**
  * Created by heiko on 19.02.2016.
  */
 public class GameBook extends GLSurfaceView
 {
-    private GameStack<GamePage> pages;                          // Stack of the currently set GamePages
-    public ResourceManager resources;                           // Manages resources like images and audio
+    private GameStack<GamePage> pages;                  // Stack of the currently set GamePages
+    public ResourceManager resources;                   // Manages resources like images and audio
 
-    private GameThread gameThread;                              // The thread that triggers the game-mechanics-updates
-    public GameRenderer gameRenderer;                           // The OpenGL-Renderer that draws all the things
-    public long lastGameFPS = 0;                                // The framerate the gameThread achieved in the last Frame
-    public long lastDrawFPS = 0;                                // The framerate the drawThread achieved in the last Frame
+    private GameThread gameThread;                      // The thread that triggers the game-mechanics-updates
+    public GameRenderer gameRenderer;                   // The OpenGL-Renderer that draws all the things
+    long lastGameFPS = 0;                               // The framerate the gameThread achieved in the last Frame
+    long lastDrawFPS = 0;                               // The framerate the drawThread achieved in the last Frame
 
-    public int screenWidth = 0;                                 // The actual width of the screen
-    public int screenHeight = 0;                                // The actual height of the screen
-    public int gameWidth = 0;                                   // The gameWidth. Gets scaled up/down to the screen
-    public int gameHeight = 0;                                  // The gameHeight. Gets scaled up/down to the screen
+    int screenWidth = 0;                                // The actual width of the screen
+    int screenHeight = 0;                               // The actual height of the screen
+    int gameWidth = 0;                                  // The gameWidth. Gets scaled up/down to the screen
+    int gameHeight = 0;                                 // The gameHeight. Gets scaled up/down to the screen
 
     // cache-variables to prevent memory-allocations
-    private GameStack<GamePage> drawPages;                      // used by the drawThread to iterate through the GamePages
-    private GameStack<GamePage> temp;                           // used by the everything but the drawThread to iterate through the GamePages
-    private GameStack<GamePage> temp2;                           // used by the everything but the drawThread to iterate through the GamePages
+    private GameStack<GamePage> drawPages;              // used by the drawThread to iterate through the GamePages
+    private GameStack<GamePage> temp;                   // used by the everything but the drawThread to iterate through the GamePages
+    private GameStack<GamePage> temp2;                  // used by the everything but the drawThread to iterate through the GamePages
 
     // Framework-interal settings
-    public Bitmap.Config bitmapConfig = Bitmap.Config.RGB_565;  // The bitmap config to use throughout the game
+    Bitmap.Config bitmapConfig = Bitmap.Config.RGB_565; // The bitmap config to use throughout the game
 
-     public GameBook(Context a_context)
+    public GameBook(Context a_context)
     {
         super(a_context);
-        this._Init(a_context, a_context.getResources().getDisplayMetrics().widthPixels, a_context.getResources().getDisplayMetrics().heightPixels);
+        this.Init(a_context, a_context.getResources().getDisplayMetrics().widthPixels, a_context.getResources().getDisplayMetrics().heightPixels);
     }
 
     public GameBook(Context a_context, int a_gameWidth, int a_gameHeight)
     {
         super(a_context);
-        this._Init(a_context, a_gameWidth, a_gameHeight);
+        this.Init(a_context, a_gameWidth, a_gameHeight);
     }
 
-    private void _Init(Context a_context, int a_gameWidth, int a_gameHeight)
+    private void Init(Context a_context, int a_gameWidth, int a_gameHeight)
     {
         this.screenWidth = a_context.getResources().getDisplayMetrics().widthPixels;
         this.screenHeight = a_context.getResources().getDisplayMetrics().heightPixels;
@@ -220,49 +219,49 @@ public class GameBook extends GLSurfaceView
     }
 
     // updates the Game-mechanics. Is called by the gameThread
-    public void _Update(long a_timeDelta, double a_timeFactor)
+    void Update(long a_timeDelta, double a_timeFactor)
     {
         this.temp = this.pages;
         while (this.temp.content != null)
         {
-            this.temp.content._Update(a_timeDelta, a_timeFactor);
+            this.temp.content.Update(a_timeDelta, a_timeFactor);
             this.temp = this.temp.next;
         }
     }
 
     // Draws teh current game-status to the next free Framebuffer. Is called by the drawThread
-    public void _Draw(float[] a_mvpMatrix)
+    void Draw(float[] a_mvpMatrix)
     {
         this.drawPages = pages;
         while (this.drawPages.content != null)
         {
             if (this.drawPages.content.visible == true)
-                this.drawPages.content._Draw(a_mvpMatrix);
+                this.drawPages.content.Draw(a_mvpMatrix);
 
             this.drawPages = this.drawPages.next;
         }
     }
 
     // gets called once OpenGL is ready to be used
-    public void _OGLReady()
+    void OGLReady()
     {
         this.resources._OGLReady();
         this.drawPages = pages;
         while (this.drawPages.content != null)
         {
-            this.drawPages.content._OGLReady();
+            this.drawPages.content.OGLReady();
             this.drawPages = this.drawPages.next;
         }
     }
 
     // gets called when the screen changes (e.g. on orientiation change, and on startup)
-    public void _UpdateScreenDimensions(float a_horzVertexRatio, float a_vertVertexRatio)
+    void UpdateScreenDimensions(float a_horzVertexRatio, float a_vertVertexRatio)
     {
         this.resources._UpdateScreenDimensions(a_horzVertexRatio, a_vertVertexRatio);
         this.drawPages = pages;
         while (this.drawPages.content != null)
         {
-            this.drawPages.content._UpdateScreenDimensions(a_horzVertexRatio, a_vertVertexRatio);
+            this.drawPages.content.UpdateScreenDimensions(a_horzVertexRatio, a_vertVertexRatio);
             this.drawPages = this.drawPages.next;
         }
     }
@@ -290,7 +289,7 @@ public class GameBook extends GLSurfaceView
             while (this.running)
             {
                 startTime = System.nanoTime();
-                this.gamebook._Update(this.lastFrameDuration, this.lastFrameDuration / this.frameTime);
+                this.gamebook.Update(this.lastFrameDuration, this.lastFrameDuration / this.frameTime);
                 this.lastRenderBudget = this.frameTime - (System.nanoTime() - startTime);
 
                 synchronized (this)

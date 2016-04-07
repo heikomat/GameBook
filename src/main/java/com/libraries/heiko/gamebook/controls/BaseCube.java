@@ -4,9 +4,6 @@ import com.libraries.heiko.gamebook.GameBook;
 import com.libraries.heiko.gamebook.GameElement;
 import com.libraries.heiko.gamebook.GamePage;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-
 /**
  * Created by heiko on 03.04.2016.
  */

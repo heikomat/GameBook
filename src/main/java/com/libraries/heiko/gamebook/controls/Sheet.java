@@ -15,7 +15,8 @@ public class Sheet extends BaseSquare
     }
 
     // Draws the Sheet on the framebuffer
-    public void _Draw(float[] a_mvpMatrix)
+    @Override
+    protected void _Draw(float[] a_mvpMatrix)
     {
         this.DrawBasics(a_mvpMatrix);
     }

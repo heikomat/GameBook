@@ -20,17 +20,17 @@ public class Label extends BaseSquare
     public Label(String a_id, GamePage a_page, GameBook a_book, GameElement a_parent, GameFont a_font)
     {
         super(a_id, a_page, a_book, a_parent);
-        this._Init(a_font, "");
+        this.Init(a_font, "");
     }
 
     public Label(String a_id, GamePage a_page, GameBook a_book, GameElement a_parent, GameFont a_font, String a_text)
     {
         super(a_id, a_page, a_book, a_parent);
-        this._Init(a_font, a_text);
+        this.Init(a_font, a_text);
     }
 
     // Initializes the default values of the label
-    public void _Init(GameFont a_font, String a_text)
+    private void Init(GameFont a_font, String a_text)
     {
         this.font = a_font;
         this.SetColor("#FFFFFF");
@@ -65,8 +65,9 @@ public class Label extends BaseSquare
         this.fontColor = Color.parseColor(a_fontColor);
     }
 
+    @Override
     // Draws the Label on the framebuffer
-    public void _Draw(float[] a_mvpMatrix)
+    protected void _Draw(float[] a_mvpMatrix)
     {
 
         if (this.font.fontLoaded == false)
