@@ -72,7 +72,7 @@ public class GameActivity extends Activity
             Sheet sheet = (Sheet) p1.AddSheet("TestSheet_" + i, parent, 10, 20, 160, 160);
             if (i == 0)
             {
-                sheet.hideOverflow = true;
+			   sheet.HideOverflow(true);
                 sheet.SetBoxStyle(0, "#33FF0000", "#FF9999FF", 1);
                 sheet.SetBackground(gb.resources.GetImage("rauchen"));
                 sheet.SetSize(800, 800);
