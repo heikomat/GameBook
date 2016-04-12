@@ -2,6 +2,7 @@ package com.libraries.heiko.gamebook;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.provider.Settings;
 
 import com.libraries.heiko.gamebook.tools.*;
 
@@ -12,7 +13,9 @@ public class ResourceManager
 {
     private GameStack<GameResource> images;     // holds resources of the type 'image'
     private GameStack<GameResource> fonts;      // holds resources of the type 'font'
-    private GameFont tempFont;                    // hold a font to load it
+    private GameStack<GameResource> tilesets;   // holds resources of the type 'font'
+    private GameFont tempFont;                  // hold a font to load it
+    private Tileset tempTileset;               // hold a font to load it
     private GameStack<GameResource> tempStack;  // used to iterate trough resurce-stacks
     private GameResource tempResource;          // used to temporarily hold a new resource when adding it
     private GameBook book;                      // reference to the GameBook
@@ -22,6 +25,7 @@ public class ResourceManager
         this.book = a_book;
         this.images = new GameStack<GameResource>();
         this.fonts = new GameStack<GameResource>();
+        this.tilesets = new GameStack<GameResource>();
         this.tempStack = new GameStack<GameResource>();
     }
 
@@ -71,6 +75,7 @@ public class ResourceManager
     {
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inPreferredConfig = this.book.bitmapConfig;
+        options.inScaled = false;
         return (Bitmap) this._AddResource(a_id, this.images, BitmapFactory.decodeResource(this.book.getContext().getResources(), a_image, options));
     }
 
@@ -185,6 +190,94 @@ public class ResourceManager
 
             this.tempStack = this.tempStack.next;
         }
+    }
+
+
+    /*
+        Function: GetImage
+            Gets a previously stored Tileset
+
+        Parameter:
+            a_id    - String    | ID of the stored Tileset
+
+        Returns:
+            Tileset -> - The requested Tileset
+    */
+    public Tileset GetTileset(String a_id)
+    {
+        return (Tileset) this._GetResource(a_id, this.tilesets);
+    }
+
+    /*
+        Function: AddTileset
+            Stores a tileset using an id to later retrieve it
+
+        Parameter:
+            a_id            - String    | ID of the stored tileset
+            a_image         - Bitmap    | Image to use
+            a_tileWidth     - Integer   | width of the tiles
+            a_tileHeight    - Integer   | height of the tiles
+
+        Returns:
+            Tileset -> - The Tileset that just got stored
+    */
+    public Tileset AddTileset(String a_id, Bitmap a_image, int a_tileWidth, int a_tileHeight)
+    {
+        tempTileset = new Tileset(a_image, a_tileWidth, a_tileHeight);
+        return (Tileset) this._AddResource(a_id, this.tilesets, tempTileset);
+    }
+
+    /*
+        Function: AddTileset
+            Stores a tileset using an id to later retrieve it
+
+        Parameter:
+            a_id            - String    | ID of the stored tileset
+            a_image         - Resource  | Resource of the image to use
+            a_tileWidth     - Integer   | width of the tiles
+            a_tileHeight    - Integer   | height of the tiles
+
+        Returns:
+            Tileset -> - The Tileset that just got stored
+    */
+    public Tileset AddTileset(String a_id, int a_image, int a_tileWidth, int a_tileHeight)
+    {
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inPreferredConfig = this.book.bitmapConfig;
+        options.inScaled = false;
+        tempTileset = new Tileset(BitmapFactory.decodeResource(this.book.getContext().getResources(), a_image, options), a_tileWidth, a_tileHeight);
+        return (Tileset) this._AddResource(a_id, this.tilesets, tempTileset);
+    }
+
+    /*
+        Function: AddTileset
+            Stores a tileset using an id to later retrieve it
+
+        Parameter:
+            a_id            - String    | ID of the stored tileset
+            a_image         - String    | Path to the image to store
+            a_tileWidth     - Integer   | width of the tiles
+            a_tileHeight    - Integer   | height of the tiles
+
+        Returns:
+            Tileset -> - The Tileset that just got stored
+    */
+    public Tileset AddTileset(String a_id, String a_path, int a_tileWidth, int a_tileHeight)
+    {
+        tempTileset = new Tileset(BitmapFactory.decodeFile(a_path), a_tileWidth, a_tileHeight);
+        return (Tileset) this._AddResource(a_id, this.tilesets, tempTileset);
+    }
+
+    /*
+        Function: RemoveImage
+            Removes a previously stored tileset from the ResourceManager
+
+        Parameter:
+            a_id    - String    | ID of the tileset to remove
+    */
+    public void RemoveTileset(String a_id)
+    {
+        this._RemoveResource(a_id, this.tilesets);
     }
 
     public void _UpdateScreenDimensions(float a_horzVertexRatio, float a_vertVertexRatio)

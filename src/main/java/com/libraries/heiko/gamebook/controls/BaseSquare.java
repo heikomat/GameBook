@@ -8,6 +8,7 @@ import android.opengl.GLUtils;
 import com.libraries.heiko.gamebook.GameBook;
 import com.libraries.heiko.gamebook.GameElement;
 import com.libraries.heiko.gamebook.GamePage;
+import com.libraries.heiko.gamebook.tools.Tileset;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -21,8 +22,11 @@ public class BaseSquare extends GameElement
 {
     private int borderRadius = 0;                       // Current border-radius
     private float[] backgroundColor;                    // Current background-color
+    private float backgroundX;                          // X-position of the Background-texture
+    private float backgroundY;                          // Y-position of the Background-texture
     private float backgroundWidth;                      // Current width of the background-image in pixels
     private float backgroundHeight;                     // Current height of the background-image in pixels
+	private boolean backgroundRepeat = false;			// defines wether the background-image gets repeated or not
 
     private int borderColor = Color.TRANSPARENT;        // Current border-color
     private int borderWidth = 0;                        // Current border-width
@@ -34,12 +38,12 @@ public class BaseSquare extends GameElement
     private int colorShaderProgram;						// the ShaderProgram to use when only a backgroundColor is set
     private int imageShaderProgram;						// the ShaderProgram to use when only a backgroundImage is set
     private int colorAndImageShaderProgram;				// the ShaderProgram to use when both backgroundColor and backgroundImage are set
-    protected int stencilProgram;                          // the ShaderProgram to use when applying the mask
-    protected int shaderProgram;							// the currently used shaderProgram based on the set backgroundColor and backgroundImage
+    protected int stencilProgram;                       // the ShaderProgram to use when applying the mask
+    protected int shaderProgram;						// the currently used shaderProgram based on the set backgroundColor and backgroundImage
 														// needs to be public, so subclasses can decide not to call DrawBasics if not needed
 
 	// Variables necessary for positioning the vertices
-    protected float coords[] =                                                                // The coordinates of the 6 vertices of the rect
+    protected float coords[] =                                                          	// The coordinates of the 6 vertices of the rect
     {                                                                                       // The values represent the whole screen. they only
             0, 0, -(this.zIndex + 1),                                                       // get ues once in the constructor, and will be overwritten
             0, 1, -(this.zIndex + 1),                                                       // with the actual position directly afterwards
@@ -267,6 +271,26 @@ public class BaseSquare extends GameElement
 
         Parameter:
             a_bitmap    - Bitmap    | the backgroundImage to set
+			a_x     	- float     | x-position in pixel the texture should get
+			a_y     	- float     | y-position in pixel the texture should get
+            a_width     - float		| The width in pixel the texture should get
+            a_height    - float		| The height in pixel the texture should get
+    */
+    public void SetBackground(Bitmap a_bitmap, float a_x, float a_y, float a_width, float a_height)
+    {
+        this.backgroundBitmap = a_bitmap;
+        this.UpdateShaderProgram();
+
+        this.SetBackgroundPosition(a_x, a_y);
+        this.SetBackgroundSize(a_width, a_height);
+    }
+
+    /*
+        Function: SetBackgroundImage
+            Sets the background-bitmap of the object
+
+        Parameter:
+            a_bitmap    - Bitmap    | the backgroundImage to set
             a_width     - float		| The width in pixel the texture should get
             a_height    - float		| The height in pixel the texture should get
     */
@@ -275,6 +299,7 @@ public class BaseSquare extends GameElement
         this.backgroundBitmap = a_bitmap;
         this.UpdateShaderProgram();
 
+        this.SetBackgroundPosition(0, 0);
         this.SetBackgroundSize(a_width, a_height);
     }
 
@@ -287,7 +312,46 @@ public class BaseSquare extends GameElement
     */
     public void SetBackground(Bitmap a_bitmap)
     {
-        this.SetBackground(a_bitmap, this.width, this.height);
+        this.backgroundBitmap = a_bitmap;
+        this.UpdateShaderProgram();
+
+        this.SetBackgroundPosition(0, 0);
+        this.SetBackgroundSize(this.width, this.height);
+    }
+
+    /*
+		Function: SetTile
+			Sets the background-texture to a tile of a Tileset
+
+		Parameter:
+			a_tileset   - Tileset   | The Tileset to use
+			a_x     	- Integer   | x-position of the Tile to use
+			a_y     	- Integer   | y-position of the Tile to use
+	*/
+    public void SetTile(Tileset a_tileset, int a_x, int a_y)
+    {
+        this.backgroundBitmap = a_tileset.tileImage;
+        this.UpdateShaderProgram();
+
+		this.SetBackgroundDimensions(-a_tileset.GetXPosition(a_x) * ((float) this.width / a_tileset.tileWidth),
+									 -a_tileset.GetYPosition(a_y) * ((float) this.height / a_tileset.tileHeight),
+									 this.width * a_tileset.widthRatio,
+									 this.height * a_tileset.heightRatio);
+    }
+
+    /*
+		Function: SetBackgroundPosition
+			Sets the position of the background-texture
+
+		Parameter:
+			a_x	- float	| The x-position in pixel the texture should get
+			a_y - float	| The y-position in pixel the texture should get
+	*/
+    public void SetBackgroundPosition(float a_x, float a_y)
+    {
+        this.backgroundX = a_x;
+        this.backgroundY = a_y;
+		this._UpdateBackgroundPosition();
     }
 
 	/*
@@ -305,15 +369,64 @@ public class BaseSquare extends GameElement
 
         this.backgroundWidth = a_width;
         this.backgroundHeight = a_height;
-
-        // Set the new texture-position based on the new texture-size
-		// TODO: Allow the setting of the actual position, not only the Size!
-		this.texturePositions[1] = this.height / this.backgroundHeight;
-		this.texturePositions[4] = this.width / this.backgroundWidth;
-		this.texturePositions[6] = this.width / this.backgroundWidth;
-		this.texturePositions[7] = this.height / this.backgroundHeight;
-		this.texturePositionBuffer.put(this.texturePositions).position(0);
+		this._UpdateBackgroundPosition();
     }
+
+	/*
+		Function: SetBackgroundDimensions
+			Sets the size and position of the background-texture.
+			Is faster than setting size and position individually
+
+		Parameter:
+			a_x			- float	| The x-position in pixel the texture should get
+			a_y 		- float	| The y-position in pixel the texture should get
+			a_width		- float	| The width in pixel the texture should get
+			a_height	- float	| The height in pixel the texture should get
+	*/
+	public void SetBackgroundDimensions(float a_x, float a_y, float a_width, float a_height)
+	{
+		if (a_width == 0 || a_height == 0)
+			throw new Error("Backgroundwidth or backgroundheight of " + this.id + " cannot be set to 0");
+
+		this.backgroundX = a_x;
+		this.backgroundY = a_y;
+		this.backgroundWidth = a_width;
+		this.backgroundHeight = a_height;
+		this._UpdateBackgroundPosition();
+	}
+
+	private void _UpdateBackgroundPosition()
+	{
+		// bottom-left
+		this.texturePositions[2] = -this.backgroundX / this.backgroundWidth;
+		this.texturePositions[3] = -this.backgroundY / this.backgroundHeight;
+
+		// top-right
+		this.texturePositions[6] = (this.width / this.backgroundWidth) + this.texturePositions[2];
+		this.texturePositions[7] = (this.height / this.backgroundHeight) + this.texturePositions[3];
+
+		// top-left
+		this.texturePositions[0] = this.texturePositions[2];
+		this.texturePositions[1] = this.texturePositions[7];
+
+		// bottom-right
+		this.texturePositions[4] = this.texturePositions[6];
+		this.texturePositions[5] = this.texturePositions[3];
+		this.texturePositionBuffer.put(this.texturePositions).position(0);
+	}
+
+	/*
+		Function: SetBackgroundRepeat
+			Sets the size of the background-texture
+
+		Parameter:
+			boolean	- boolean	| true: background gets repeated, false: background doesn't get repeated
+	*/
+	public void SetBackgroundRepeat(boolean a_repeat)
+	{
+		this.backgroundRepeat = a_repeat;
+		this.UpdateShaderProgram();
+	}
 
     // Sets the shader-program to use, depending on the backgroundImage and backgroundColor currently set
     private void UpdateShaderProgram()
@@ -350,8 +463,17 @@ public class BaseSquare extends GameElement
             GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
 
             // Set wrapping mode
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_REPEAT);
-            GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_REPEAT);
+
+			if (this.backgroundRepeat)
+			{
+				GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_REPEAT);
+				GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_REPEAT);
+			}
+			else
+			{
+				GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
+				GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
+			}
 
             // Load the bitmap into the bound texture.
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, this.backgroundBitmap, 0);

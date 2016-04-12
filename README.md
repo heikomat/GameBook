@@ -30,6 +30,7 @@ As stated before, i'll make a proper readme, when the framework has matured a li
 package com.gametest.heiko.gametest;
 
 import android.app.Activity;
+import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.view.Window;
 import android.view.WindowManager;
@@ -41,56 +42,62 @@ import com.libraries.heiko.gamebook.tools.GameFont;
 
 public class GameActivity extends Activity
 {
-    GameBook gb;
-    @Override
-    protected void onCreate(Bundle savedInstanceState)
-    {
-        super.onCreate(savedInstanceState);
+	GameBook gb;
+	@Override
+	protected void onCreate(Bundle savedInstanceState)
+	{
+		super.onCreate(savedInstanceState);
 
-        //turn off title
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
+		//turn off title
+		requestWindowFeature(Window.FEATURE_NO_TITLE);
 
-        //set fullscreen
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
+		//set fullscreen
+		getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
-        // create new GameBook
-        this.gb = new GameBook(this);
-        setContentView(gb);
+		// create new GameBook
+		this.gb = new GameBook(this);
+		this.gb.SetGameOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+		this.gb.SetGameWidth(720);
+		setContentView(gb);
 
-        gb.resources.AddImage("testImage", R.drawable.test80);
-        gb.resources.AddImage("rauchen", R.drawable.rauchen);
-        GameFont font = gb.resources.AddFont("roboto", "roboto.ttf", 50);
-        GamePage p1 = gb.AddPage("Test1", true);
+		gb.resources.AddImage("testImage", R.drawable.test80);
+		gb.resources.AddImage("rauchen", R.drawable.rauchen);
+		gb.resources.AddTileset("testTiles", R.drawable.test80, 40, 40);
 
-        String parent = null;
-        for (int i = 0; i < 60; i++)
-        {
-            p1.AddLabel("Test1_" + i, null, 50 + i * 10, 1000 + i * 10, font, "Hallo, das ist ein Test");
-            if (i == 0)
-                ((BaseSquare) p1.GetElement("Test1_" + i)).SetBoxStyle(0, "#BB00FF00", "#FF9999FF", 1);
+		GameFont font = gb.resources.AddFont("roboto", "roboto.ttf", 25);
+		GamePage p1 = gb.AddPage("Test1", true);
 
-            Sheet sheet = (Sheet) p1.AddSheet("TestSheet_" + i, parent, 10, 20, 160, 160);
-            if (i == 0)
-            {
-			   sheet.HideOverflow(true);
-                sheet.SetBoxStyle(0, "#33FF0000", "#FF9999FF", 1);
-                sheet.SetBackground(gb.resources.GetImage("rauchen"));
-                sheet.SetSize(800, 800);
-                sheet.SetPosition(10, 10);
-            }
-            else
-            {
-                sheet.SetBackground(gb.resources.GetImage("testImage"));
-                sheet.SetBoxStyle(0, "#3300FFFF", "#FF9999FF", 1);
-            }
-            parent = "TestSheet_" + i;
-        }
+		String parent = null;
+		for (int i = 0; i < 60; i++)
+		{
+			p1.AddLabel("Test1_" + i, null, 25 + i * 5, 500 + i * 5, font, "Hallo, das ist ein Test");
+			if (i == 0)
+				((BaseSquare) p1.GetElement("Test1_" + i)).SetBoxStyle(0, "#BB00FF00", "#FF9999FF", 1);
 
-        gb.gameRenderer.SetRenderMode(GameRenderer.RenderMode.THREED);
-        Sheet sheet = (Sheet) p1.AddSheet("TestSheet_7000", "TestSheet_0", 100, 570, 320, 320);
-        sheet.SetBackground(gb.resources.GetImage("testImage"));
-        sheet.SetBackgroundSize(70, 70);
-    }
+			Sheet sheet = (Sheet) p1.AddSheet("TestSheet_" + i, parent, 5, 10, 80, 80);
+			if (i == 0)
+			{
+				sheet.HideOverflow(true);
+				sheet.SetBoxStyle(0, "#33FF0000", "#FF9999FF", 1);
+				sheet.SetBackground(gb.resources.GetImage("rauchen"));
+				sheet.SetSize(400, 400);
+				sheet.SetBackgroundDimensions(50, 50, 300, 300);
+				sheet.SetPosition(5, 5);
+			}
+			else
+			{
+				sheet.SetTile(gb.resources.GetTileset("testTiles"), 1, 0);
+				sheet.SetBoxStyle(0, "#3300FFFF", "#FF9999FF", 1);
+			}
+			parent = "TestSheet_" + i;
+		}
+
+		gb.gameRenderer.SetRenderMode(GameRenderer.RenderMode.THREED);
+		Sheet sheet = (Sheet) p1.AddSheet("TestSheet_7000", "TestSheet_0", 50, 282, 160, 160);
+		sheet.SetBackground(gb.resources.GetImage("testImage"));
+		sheet.SetBackgroundSize(35, 35);
+		sheet.SetBackgroundRepeat(true);
+	}
 }
 ```
 

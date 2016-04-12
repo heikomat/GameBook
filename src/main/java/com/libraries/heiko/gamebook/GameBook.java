@@ -1,6 +1,8 @@
 package com.libraries.heiko.gamebook;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.opengl.GLSurfaceView;
 
@@ -34,26 +36,12 @@ public class GameBook extends GLSurfaceView
 
     public GameBook(Context a_context)
     {
-        super(a_context);
-        this.Init(a_context, a_context.getResources().getDisplayMetrics().widthPixels, a_context.getResources().getDisplayMetrics().heightPixels);
-    }
-
-    public GameBook(Context a_context, int a_gameWidth, int a_gameHeight)
-    {
-        super(a_context);
-        this.Init(a_context, a_gameWidth, a_gameHeight);
-    }
-
-    private void Init(Context a_context, int a_gameWidth, int a_gameHeight)
-    {
+		super(a_context);
         this.screenWidth = a_context.getResources().getDisplayMetrics().widthPixels;
         this.screenHeight = a_context.getResources().getDisplayMetrics().heightPixels;
-        this.gameWidth = a_gameWidth;
-        this.gameHeight = a_gameHeight;
-
+        this.gameWidth = this.screenWidth;
+        this.gameHeight = this.screenHeight;
         pages = new GameStack<GamePage>();
-        // TODO: Handle Instance changes (like orientation change).
-        // TODO: At the moment, an orientationchange rebuilds the whole view and eats memory
 
         // initiate the resource-stacks
         this.resources = new ResourceManager(this);
@@ -71,6 +59,27 @@ public class GameBook extends GLSurfaceView
         this.gameThread = new GameThread(this, 70);
         this.gameThread.setRunning(true);
     }
+
+	public void SetGameOrientation(int a_orientation)
+	{
+		((Activity) this.getContext()).setRequestedOrientation(a_orientation);
+	}
+
+	public int SetGameWidth(int a_width)
+	{
+		this.gameWidth = a_width;
+		this.gameHeight = (int) Math.ceil(this.gameWidth * ((float) this.screenHeight / this.screenWidth));
+		this.gameRenderer.SetRenderMode(null);
+		return this.gameHeight;
+	}
+
+	public int SetGameHeight(int a_height)
+	{
+		this.gameHeight = a_height;
+		this.gameWidth = (int) Math.ceil(this.gameHeight * ((float) this.screenWidth / this.screenHeight));
+		this.gameRenderer.SetRenderMode(null);
+		return this.gameWidth;
+	}
 
     @Override
     public void onPause()

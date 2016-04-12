@@ -69,7 +69,9 @@ public class GameRenderer implements GLSurfaceView.Renderer
     // Sets the RenderMode (2D or 3D)
     public void SetRenderMode(RenderMode a_renderMode)
     {
-        this.renderMode = a_renderMode;
+        if (a_renderMode != null)
+            this.renderMode = a_renderMode;
+
         if (!this.oglReady)
             return;
 
@@ -81,8 +83,8 @@ public class GameRenderer implements GLSurfaceView.Renderer
         this.top = 1;
         this.width = this.right - this.left;
         this.height = this.top - this.bottom;
-        this.horzVertexRatio = this.width/this.displayWidth;
-        this.vertVertexRatio = this.height/this.displayHeight;
+        this.horzVertexRatio = this.width/this.gamebook.gameWidth;
+        this.vertVertexRatio = this.height/this.gamebook.gameHeight;
 
         if (this.renderMode == RenderMode.TWOD)
             Matrix.orthoM(projectionMatrix, 0,   this.left, this.right,   this.bottom, this.top,   -1, 10);
