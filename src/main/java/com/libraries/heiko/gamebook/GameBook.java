@@ -20,6 +20,7 @@ public class GameBook extends GLSurfaceView
     public GameRenderer gameRenderer;                   // The OpenGL-Renderer that draws all the things
     long lastGameFPS = 0;                               // The framerate the gameThread achieved in the last Frame
     long lastDrawFPS = 0;                               // The framerate the drawThread achieved in the last Frame
+    long startTime = 0;
 
     int screenWidth = 0;                                // The actual width of the screen
     int screenHeight = 0;                               // The actual height of the screen
@@ -37,6 +38,7 @@ public class GameBook extends GLSurfaceView
     public GameBook(Context a_context)
     {
 		super(a_context);
+        this.startTime = System.nanoTime();
         this.screenWidth = a_context.getResources().getDisplayMetrics().widthPixels;
         this.screenHeight = a_context.getResources().getDisplayMetrics().heightPixels;
         this.gameWidth = this.screenWidth;
@@ -233,7 +235,7 @@ public class GameBook extends GLSurfaceView
         this.temp = this.pages;
         while (this.temp.content != null)
         {
-            this.temp.content.Update(a_timeDelta, a_timeFactor);
+            this.temp.content.Update(a_timeDelta, a_timeFactor, System.nanoTime() - this.startTime);
             this.temp = this.temp.next;
         }
     }

@@ -68,6 +68,7 @@ public class BaseSquare extends GameElement
 	private FloatBuffer texturePositionBuffer;												// Buffer holding the texture-positions
 	private int texturePositionHandle = 0;													// Handle to s_texture in the fragmentShaders
 	private Bitmap backgroundBitmap;														// The Bitmap to use as texture (aka backgroundImage)
+	private Tileset tileset;																// the currently used Tileset
 
 	// The texture-shader to use, when a background-texture is set
     private final String textureVertexShaderCode  =
@@ -330,7 +331,8 @@ public class BaseSquare extends GameElement
 	*/
     public void SetTile(Tileset a_tileset, int a_x, int a_y)
     {
-        this.backgroundBitmap = a_tileset.tileImage;
+		this.tileset = a_tileset;
+		this.backgroundBitmap = this.tileset.tileImage;
         this.UpdateShaderProgram();
 
 		this.SetBackgroundDimensions(-a_tileset.GetXPosition(a_x) * ((float) this.width / a_tileset.tileWidth),
@@ -338,6 +340,42 @@ public class BaseSquare extends GameElement
 									 this.width * a_tileset.widthRatio,
 									 this.height * a_tileset.heightRatio);
     }
+
+
+	/*
+		Function: SetTileSet
+			Sets the tileset to use for the background-texture.
+			SetTile needs to be called after that, to display a tile
+
+		Parameter:
+			a_tileset   - Tileset   | The Tileset to use
+	*/
+	public void SetTileSet(Tileset a_tileset)
+	{
+		this.tileset = a_tileset;
+		this.backgroundBitmap = this.tileset.tileImage;
+		this.UpdateShaderProgram();
+	}
+
+	/*
+		Function: SetTilePosition
+			Sets the background-texture to a tile of a tileset.
+			The tileset hast to already be set
+
+		Parameter:
+			a_x     	- Integer   | x-position of the Tile to use
+			a_y     	- Integer   | y-position of the Tile to use
+	*/
+	public void SetTilePosition(int a_x, int a_y)
+	{
+		if (this.tileset == null)
+			return;
+
+		this.SetBackgroundDimensions(-this.tileset.GetXPosition(a_x) * ((float) this.width / this.tileset.tileWidth),
+				-this.tileset.GetYPosition(a_y) * ((float) this.height / this.tileset.tileHeight),
+				this.width * this.tileset.widthRatio,
+				this.height * this.tileset.heightRatio);
+	}
 
     /*
 		Function: SetBackgroundPosition
@@ -452,9 +490,10 @@ public class BaseSquare extends GameElement
 		// Get the vertex-position handle of the current program and enable its usage
 		this.vertexPositionHandle = GLES20.glGetAttribLocation(this.shaderProgram, "vPosition");
 
-        if (this.backgroundBitmap != null)
+        if (this.backgroundBitmap != null && this.tileset == null)
         {
             // Bind texture to texturename
+			GLES20.glGenTextures(1, this.textureIDs, 0);
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
             GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.textureIDs[0]);
 
@@ -477,10 +516,11 @@ public class BaseSquare extends GameElement
 
             // Load the bitmap into the bound texture.
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, this.backgroundBitmap, 0);
-
-            // Get handle to texture coordinates
-            this.texturePositionHandle = GLES20.glGetAttribLocation(this.shaderProgram, "a_texCoord");
         }
+
+		// Get handle to texture coordinates
+		if (this.backgroundBitmap != null)
+			this.texturePositionHandle = GLES20.glGetAttribLocation(this.shaderProgram, "a_texCoord");
     }
 
     /*
@@ -516,7 +556,11 @@ public class BaseSquare extends GameElement
         {
 			// Bind the Texture and set its coordinates
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.textureIDs[0]);
+			if (this.tileset != null)
+				GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.tileset.textureIDs[0]);
+			else
+            	GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.textureIDs[0]);
+
 			GLES20.glEnableVertexAttribArray(this.texturePositionHandle);
 			GLES20.glVertexAttribPointer(this.texturePositionHandle, 2, GLES20.GL_FLOAT, false, 0, this.texturePositionBuffer);
         }

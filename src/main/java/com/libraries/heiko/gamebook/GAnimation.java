@@ -5,7 +5,7 @@ import android.opengl.Matrix;
 /**
  * Created by heiko on 19.02.2016.
  */
-class GAnimation
+public class GAnimation
 {
     private float[] currentTranslation = {1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1};  // the currently applied transition
     private float[] temp;  // the currently applied transition
@@ -15,9 +15,8 @@ class GAnimation
     }
 
     // Updates the animation
-    void Update(long a_timeDelta, double a_timeFactor)
+    void Update(long a_timeDelta, double a_timeFactor, long a_passedTime)
     {
-        Matrix.rotateM(this.currentTranslation, 0, 30 * ((float) a_timeDelta / 1000000000), 1, 1, 1);
     }
 
     // Applys the animation

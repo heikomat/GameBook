@@ -2,6 +2,7 @@ package com.libraries.heiko.gamebook;
 
 import android.opengl.GLES20;
 import android.opengl.Matrix;
+import android.support.v7.widget.FitWindowsViewGroup;
 
 import com.libraries.heiko.gamebook.tools.GameStack;
 
@@ -29,11 +30,12 @@ public class GameElement
     protected boolean visible = true;               // true: The GameElement is visible, false: The GameElement is not visible
     protected boolean hideOverflow = false;         // true: childelements visually can't be oudside this element, false: they can
     protected float zIndex = 0;                     // z-index of the Element. Elements with a lower z-index will be drawn first (below other pages)
+    protected boolean needsUpdate = false;          // true: the element needs to be updated every frame, false: the element doesn't need updating
     float drawOrder = 0;                            // z-index of the Element. Elements with a lower z-index will be drawn first (below other pages)
 
     // cache-variables to prevent memory-allocations
-    private GameStack<GAnimation> animations;       // Stack of the currently active animations
-    private GameStack<GameElement> children;        // Stack of the child-elements
+    protected GameStack<GAnimation> animations;       // Stack of the currently active animations
+    protected GameStack<GameElement> children;        // Stack of the child-elements
 
     // cache-variables to prevent memory-allocations
     private GameStack<GAnimation> drawAnimations;   // used by the Draw function to iterate through the animations
@@ -55,9 +57,6 @@ public class GameElement
         this.children = new GameStack<GameElement>();
         this.animations = new GameStack<GAnimation>();
         this.elementMvpMatrix = new float[16];
-
-		// TODO: This is for testing only. Remove, when no longer needed
-		this.animations.push(new GAnimation());
     }
 
     /*
@@ -67,9 +66,10 @@ public class GameElement
         Parameter:
             a_element   - GameElement   | The GameElement to register
     */
-    public void AddChild(GameElement a_element)
+    public GameElement AddChild(GameElement a_element)
     {
         this.children.push(a_element);
+        return a_element;
     }
 
     /*
@@ -164,6 +164,7 @@ public class GameElement
         this.height = a_height;
 		this.vectorWidth = ((float) this.width / this.book.gameWidth) * this.book.gameRenderer.width;
 		this.vectorHeight = ((float) this.height / this.book.gameHeight) * this.book.gameRenderer.height;
+        this.SetPosition(this.x, this.y);
     }
 
     /*
@@ -179,7 +180,10 @@ public class GameElement
         this.x = a_x;
         this.y = a_y;
 		this.vectorX = this.book.gameRenderer.left + ((float) this.x / this.book.gameWidth) * this.book.gameRenderer.width;
-		this.vectorY = this.book.gameRenderer.bottom + ((float) this.y / this.book.gameHeight) * this.book.gameRenderer.height;
+        if (this.parent == null)
+		    this.vectorY = this.book.gameRenderer.bottom + ((float) (this.book.gameHeight - (this.y + this.height)) / this.book.gameHeight) * this.book.gameRenderer.height;
+        else
+            this.vectorY = this.book.gameRenderer.bottom + ((float) (this.parent.height - (this.y + this.height)) / this.book.gameHeight) * this.book.gameRenderer.height;
     }
 
     /*
@@ -253,20 +257,21 @@ public class GameElement
     }
 
     // calculates frame-updates that are valid for all element-types and updates the child-elemente
-    final void Update(long a_timeDelta, double a_timeFactor)
+    final void Update(long a_timeDelta, double a_timeFactor, long a_timePassed)
     {
         this.tempAnimations = this.animations;
         while (this.tempAnimations.content != null)
         {
-            this.tempAnimations.content.Update(a_timeDelta, a_timeFactor);
+            this.tempAnimations.content.Update(a_timeDelta, a_timeFactor, a_timePassed);
             this.tempAnimations = this.tempAnimations.next;
         }
 
-        this._Update(a_timeDelta, a_timeFactor);
+        this._Update(a_timeDelta, a_timeFactor, a_timePassed);
         this.tempElements = this.children;
         while (this.tempElements != null && this.tempElements.content != null)
         {
-            this.tempElements.content.Update(a_timeDelta, a_timeFactor);
+            if (this.tempElements.content.needsUpdate == true)
+                this.tempElements.content.Update(a_timeDelta, a_timeFactor, a_timePassed);
             this.tempElements = this.tempElements.next;
         }
     }
@@ -337,6 +342,13 @@ public class GameElement
 		}
 	}
 
+    protected final void EnableUpdating()
+    {
+        this.needsUpdate = true;
+        if (this.parent != null)
+            this.parent.EnableUpdating();
+    }
+
     // placeholder for the _OGLReady-function. Can be overwritten by the actual controls
     protected void _OGLReady()
     {
@@ -348,7 +360,7 @@ public class GameElement
 	}
 
     // placeholder for the _Update-function. Can be overwritten by the actual controls
-    protected void _Update(long a_timeDelta, double a_timeFactor)
+    protected void _Update(long a_timeDelta, double a_timeFactor, long a_timePassed)
     {
     }
 

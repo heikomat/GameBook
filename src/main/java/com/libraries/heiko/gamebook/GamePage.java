@@ -3,6 +3,7 @@ package com.libraries.heiko.gamebook;
 import android.opengl.GLES20;
 
 import com.libraries.heiko.gamebook.controls.Label;
+import com.libraries.heiko.gamebook.controls.MapLayer;
 import com.libraries.heiko.gamebook.controls.Sheet;
 import com.libraries.heiko.gamebook.tools.GameFont;
 import com.libraries.heiko.gamebook.tools.GameStack;
@@ -50,7 +51,7 @@ public class GamePage
     }
 
     // updates the game-mechanics of the elements of this GamePage
-    void Update(long a_timeDelta, double a_timeFactor)
+    void Update(long a_timeDelta, double a_timeFactor, long a_timePassed)
     {
         if (this.elements == null)
             return;
@@ -58,7 +59,9 @@ public class GamePage
         this.temp = this.elements;
         while (this.temp != null && this.temp.content != null)
         {
-            this.temp.content.Update(a_timeDelta, a_timeFactor);
+            if (this.temp.content.needsUpdate == true)
+                this.temp.content.Update(a_timeDelta, a_timeFactor, a_timePassed);
+
             this.temp = this.temp.next;
         }
     }
@@ -283,6 +286,33 @@ public class GamePage
         this.tempElement = this.GetParentElement(a_parentID);
         this.currentElment = new Sheet(a_id, this, this.book, this.tempElement);
         return this.AddElement(this.currentElment, this.tempElement, a_x, a_y, a_width, a_height);
+    }
+
+    /*
+        Function: AddMapLayer
+            Adds a new AddMapLayer to the GamePage
+
+        Parameter:
+            a_id            - String    | The ID of the new element
+            a_parentID      - String    | The ID of the GameElement that should act as the parent for the new element
+            a_x             - int       | x-position of the new element
+            a_y             - int       | y-position of the new element
+            a_width         - int       | width of the new element
+            a_height        - int       | height of the new element
+            a_mapWidth      - int       | width of the new mapLayer in tiles
+            a_mapHeight     - int       | height of the new mapLayer in tiles
+            a_tileWidth     - int       | width mapTiles in pixel
+            a_tileHeight    - int       | height of the mapTiles in pixel
+
+        Returns:
+            GameElement -> - The new MapLayer
+    */
+    public GameElement AddMapLayer(String a_id, String a_parentID, int a_x, int a_y, int a_mapWidth, int a_mapHeight, int a_tileWidth, int a_tileHeight)
+    {
+        this.CheckElementAlreadyExists(a_id);
+        this.tempElement = this.GetParentElement(a_parentID);
+        this.currentElment = new MapLayer(a_id, this, this.book, this.tempElement, a_mapWidth, a_mapHeight, a_tileWidth, a_tileHeight);
+        return this.AddElement(this.currentElment, this.tempElement, a_x, a_y, a_mapWidth * a_tileHeight, a_mapHeight * a_tileHeight);
     }
 
     // Checks if an element with a given ID already exists

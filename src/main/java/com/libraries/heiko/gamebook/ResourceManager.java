@@ -180,19 +180,6 @@ public class ResourceManager
         this._RemoveResource(a_id, this.fonts);
     }
 
-    public void _OGLReady()
-    {
-        this.tempStack = this.fonts;
-        while (this.tempStack.content != null)
-        {
-            if (!((GameFont) this.tempStack.content.resource).fontLoaded)
-                ((GameFont) this.tempStack.content.resource).Load();
-
-            this.tempStack = this.tempStack.next;
-        }
-    }
-
-
     /*
         Function: GetImage
             Gets a previously stored Tileset
@@ -224,6 +211,9 @@ public class ResourceManager
     public Tileset AddTileset(String a_id, Bitmap a_image, int a_tileWidth, int a_tileHeight)
     {
         tempTileset = new Tileset(a_image, a_tileWidth, a_tileHeight);
+        if (this.book.gameRenderer.oglReady == true)
+            tempTileset.CreateTexture();
+
         return (Tileset) this._AddResource(a_id, this.tilesets, tempTileset);
     }
 
@@ -245,8 +235,7 @@ public class ResourceManager
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inPreferredConfig = this.book.bitmapConfig;
         options.inScaled = false;
-        tempTileset = new Tileset(BitmapFactory.decodeResource(this.book.getContext().getResources(), a_image, options), a_tileWidth, a_tileHeight);
-        return (Tileset) this._AddResource(a_id, this.tilesets, tempTileset);
+        return this.AddTileset(a_id, BitmapFactory.decodeResource(this.book.getContext().getResources(), a_image, options), a_tileWidth, a_tileHeight);
     }
 
     /*
@@ -264,8 +253,7 @@ public class ResourceManager
     */
     public Tileset AddTileset(String a_id, String a_path, int a_tileWidth, int a_tileHeight)
     {
-        tempTileset = new Tileset(BitmapFactory.decodeFile(a_path), a_tileWidth, a_tileHeight);
-        return (Tileset) this._AddResource(a_id, this.tilesets, tempTileset);
+        return this.AddTileset(a_id, BitmapFactory.decodeFile(a_path), a_tileWidth, a_tileHeight);
     }
 
     /*
@@ -278,6 +266,27 @@ public class ResourceManager
     public void RemoveTileset(String a_id)
     {
         this._RemoveResource(a_id, this.tilesets);
+    }
+
+    public void _OGLReady()
+    {
+        this.tempStack = this.fonts;
+        while (this.tempStack.content != null)
+        {
+            if (!((GameFont) this.tempStack.content.resource).fontLoaded)
+                ((GameFont) this.tempStack.content.resource).Load();
+
+            this.tempStack = this.tempStack.next;
+        }
+
+        this.tempStack = this.tilesets;
+        while (this.tempStack.content != null)
+        {
+            if (!((Tileset) this.tempStack.content.resource).textureCreated)
+                ((Tileset) this.tempStack.content.resource).CreateTexture();
+
+            this.tempStack = this.tempStack.next;
+        }
     }
 
     public void _UpdateScreenDimensions(float a_horzVertexRatio, float a_vertVertexRatio)
